@@ -18,7 +18,6 @@ if not SENHA_PDF_99PAY:
     raise ValueError("Variável de ambiente SENHA_PDF_99PAY não encontrada no arquivo .env!")
 
 GOOGLE_SHEET_ID = os.getenv("GOOGLE_SHEET_ID", "1ZfxdNBoyLw0zwLweDWROLEL1uUemtv3jlgWj120bexo")
-GOOGLE_APPS_SCRIPT_WEBHOOK_URL = os.getenv("GOOGLE_APPS_SCRIPT_WEBHOOK_URL", "")
 
 # ==============================================================================
 # 1. TETOS MENSAIS E SEMANAIS DE CONTROLE ATIVO (SEMÁFOROS PWA)
