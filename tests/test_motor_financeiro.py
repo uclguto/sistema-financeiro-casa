@@ -23,10 +23,13 @@ import sync_google_sheets
 
 
 def test_extrator_unificado_execucao_e_integridade():
-    """Valida se a extração gera os dados dos 11 meses com todas as métricas essenciais."""
+    """Valida se a extração gera os dados dos 11 meses com as 28+ categorias e 2.000+ transações."""
     consolidado = extrator_unificado.executar_extracao()
     assert "metadata" in consolidado
     assert "resumo_mensal" in consolidado
+    assert "categorias_resumo" in consolidado
+    assert "todas_transacoes" in consolidado
+    assert "semaforos_atuais" in consolidado
     assert "parcelas_futuras" in consolidado
     assert "assinaturas" in consolidado
     assert "cofrinhos" in consolidado
@@ -36,6 +39,18 @@ def test_extrator_unificado_execucao_e_integridade():
     assert len(meses) == 11
     assert meses[0] == "2026-01"
     assert meses[-1] == "2026-11"
+
+    # Valida 28+ categorias e volume real auditado de transações
+    assert len(consolidado["categorias_resumo"]) >= 25
+    assert len(consolidado["todas_transacoes"]) >= 2000
+
+    # Valida semáforos reais
+    sem = consolidado["semaforos_atuais"]
+    assert "va_semana" in sem
+    assert "comer_fora_semana" in sem
+    assert "uber_guto_semana" in sem
+    assert "uber_je_semana" in sem
+    assert "compras_online_mes" in sem
 
     # Valida consistência de valores (folha e cartões positivos)
     tot_sal = sum(rm["salario_liquido"] for rm in consolidado["resumo_mensal"])
@@ -89,7 +104,7 @@ def test_payload_enc_zero_leakage():
 
 
 def test_geracao_planilha_google_sheets_xlsx():
-    """Valida a geração da planilha XLSX com as 4 abas estruturadas."""
+    """Valida a geração da planilha XLSX com as abas estruturadas e preservação das originais."""
     sync_google_sheets.sincronizar_planilha()
     xlsx_path = sync_google_sheets.OUTPUT_XLSX
     assert os.path.exists(xlsx_path)
@@ -97,9 +112,11 @@ def test_geracao_planilha_google_sheets_xlsx():
     wb = openpyxl.load_workbook(xlsx_path, data_only=False)
     sheet_names = wb.sheetnames
     assert "Resumo & Metas 2026-2027" in sheet_names
-    assert "Anual por Blocos 2026" in sheet_names
+    assert "Gastos Mensais por Categoria" in sheet_names
     assert "Parcelas Futuras & Assinaturas" in sheet_names
     assert "Lançamentos Auditados 2026" in sheet_names
+    # Abas originais preservadas
+    assert any("Orig -" in name for name in sheet_names)
 
     ws_resumo = wb["Resumo & Metas 2026-2027"]
     assert ws_resumo["A1"].value == "CONTROLE FINANCEIRO DOMÉSTICO — GUTO & JÉ"
