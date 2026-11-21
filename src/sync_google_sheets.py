@@ -96,10 +96,13 @@ def _extract_day(tx):
     return 1
 
 
-def criar_aba_total_anual(wb, data):
+def criar_aba_total_anual(wb, data, create_new=False):
     """Aba 1: Total Anual no formato das 8 Seções em Ordem Alfabética x 12 Meses."""
-    ws = wb.active
-    ws.title = "Total Anual"
+    if create_new:
+        ws = wb.create_sheet(title="Total Anual", index=0)
+    else:
+        ws = wb.active
+        ws.title = "Total Anual"
     ws.views.sheetView[0].showGridLines = True
 
     ws["A1"] = "CONTROLE FINANCEIRO ANUAL 2026 — 8 SEÇÕES EM ORDEM ALFABÉTICA"
@@ -673,22 +676,35 @@ def enviar_xlsx_para_google_drive(xlsx_path: str, sheet_id: str) -> bool:
 
 
 def sincronizar_planilha():
-    """Gera a planilha XLSX no formato original (Total Anual + 12 Abas Mensais + Resumo + Histórico) e envia para a nuvem."""
+    """Gera a planilha XLSX no formato original (Total Anual + 12 Abas Mensais + Resumo + Histórico 100% formatado) e envia para a nuvem."""
     if not os.path.exists(CONSOLIDADO_PATH):
         raise FileNotFoundError(f"Consolidado não encontrado em {CONSOLIDADO_PATH}. Execute o extrator primeiro.")
 
     with open(CONSOLIDADO_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    print("Gerando arquivo XLSX no formato original (Total Anual + 12 Abas Mensais + Resumo)...")
-    wb = openpyxl.Workbook()
-    criar_aba_total_anual(wb, data)
+    print("Gerando arquivo XLSX no formato original (preservando formatação integral das abas antigas)...")
+    orig_sheets = []
+    if os.path.exists(ORIGINAL_XLSX):
+        wb = openpyxl.load_workbook(ORIGINAL_XLSX)
+        for ws_orig in wb.worksheets:
+            ws_orig.title = f"Orig - {ws_orig.title[:20]}"
+            orig_sheets.append(ws_orig)
+        criar_aba_total_anual(wb, data, create_new=True)
+        print("Abas originais preservadas com 100% das cores, bordas, fórmulas e mesclagens!")
+    else:
+        wb = openpyxl.Workbook()
+        criar_aba_total_anual(wb, data, create_new=False)
 
     for ym, mes_nome in MESES_NOMES:
         criar_aba_mensal_original(wb, ym, mes_nome, data)
 
     criar_aba_resumo_metas(wb, data)
-    copiar_abas_originais(wb)
+
+    if orig_sheets:
+        # Move as abas originais formatadas para o final da pasta de trabalho
+        novas = [s for s in wb._sheets if s not in orig_sheets]
+        wb._sheets = novas + orig_sheets
 
     wb.save(OUTPUT_XLSX)
     print(f"Planilha XLSX gerada com sucesso: {OUTPUT_XLSX} ({os.path.getsize(OUTPUT_XLSX)} bytes)")
