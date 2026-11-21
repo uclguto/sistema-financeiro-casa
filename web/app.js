@@ -492,8 +492,32 @@ function renderizarTelaParcelas() {
   // Lista de Compras Parceladas Ativas
   renderizarComprasParceladas();
 
-  // Checklist de Cortes LocalStorage
+  // Lista de Assinaturas Ativas da Casa (Kotas R$ 8,70, Aquarius ativo, sem alertas antigos)
+  renderizarAssinaturasAtivas();
+
+  // Lembretes Operacionais LocalStorage
   setupChecklistCortes();
+}
+
+function renderizarAssinaturasAtivas() {
+  const cont = document.getElementById("assinaturas-ativas-container");
+  if (!cont) return;
+  const subs = (appData.assinaturas || []).slice().sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  cont.innerHTML = `
+    <div class="compras-parc-list">
+      ${subs
+        .map((s) => `
+          <div class="compra-parc-row">
+            <div class="compra-parc-info">
+              <span class="compra-parc-desc">${s.nome}</span>
+              <span class="compra-parc-meta">${s.status_recomendacao} • ${s.meses_ativos_count} meses ativos (Acumulado: ${formatMoeda(s.total_2026)})</span>
+            </div>
+            <span class="compra-parc-val" style="color: var(--primary);">${formatMoeda(s.ultimo_valor)}/mês</span>
+          </div>
+        `)
+        .join("")}
+    </div>
+  `;
 }
 
 function renderizarComprasParceladas() {
@@ -529,41 +553,94 @@ function renderizarComprasParceladas() {
 
 function setupChecklistCortes() {
   const chks = document.querySelectorAll(".chk-cut");
-  const savingsEl = document.getElementById("total-savings");
-
-  function recalcular() {
-    let tot = 0;
-    chks.forEach((chk) => {
-      const savedState = localStorage.getItem("chk_" + chk.id);
-      if (savedState === "true") {
-        chk.checked = true;
-      }
-      if (chk.checked) {
-        tot += parseFloat(chk.dataset.save || 0);
-      }
-    });
-    savingsEl.textContent = formatMoeda(tot) + "/mês";
-  }
 
   chks.forEach((chk) => {
+    const savedState = localStorage.getItem("chk_" + chk.id);
+    if (savedState === "true") {
+      chk.checked = true;
+    }
     chk.onchange = () => {
       localStorage.setItem("chk_" + chk.id, chk.checked);
-      recalcular();
     };
   });
-
-  recalcular();
 }
 
 // ==============================================================================
-// TELA 4: 28 CATEGORIAS COMPLETAS, FILTROS E DRILL-DOWN CLICÁVEL
+// TELA 4: 8 SEÇÕES CANÔNICAS (ORDEM ALFABÉTICA), FILTROS E DRILL-DOWN UNIVERSAL
 // ==============================================================================
+
+function renderizarListaTransacoesMobileHTML(txs) {
+  return `
+    <div class="tx-list-mobile">
+      ${txs
+        .slice()
+        .reverse()
+        .map((t) => {
+          const badgeClass =
+            t.tipo === "VA"
+              ? "badge-va"
+              : t.holder === "AUGUSTO"
+              ? "badge-guto"
+              : "badge-je";
+          const parcStr = t.inst_cur ? `${t.inst_cur}/${t.inst_tot}` : "";
+          return `
+            <div class="tx-row-item">
+              <div class="tx-row-left">
+                <span class="tx-row-desc">${t.desc}</span>
+                <div class="tx-row-meta">
+                  <span>${t.date || t.ym}</span>
+                  <span class="badge-tag ${badgeClass}">${t.holder} (${t.source})</span>
+                  ${parcStr ? `<span class="badge-tag badge-parc">${parcStr}</span>` : ""}
+                </div>
+              </div>
+              <span class="tx-row-right">${formatMoeda(t.amount)}</span>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function abrirModalDrillDown(categoriaNome, mesFiltro) {
+  const modal = document.getElementById("drilldown-modal");
+  const titleEl = document.getElementById("drilldown-title");
+  const subEl = document.getElementById("drilldown-subtitle");
+  const bodyEl = document.getElementById("drilldown-body");
+
+  const allTxs = appData.todas_transacoes || [];
+  const txs = allTxs.filter((t) => {
+    if (t.category !== categoriaNome) return false;
+    if (mesFiltro && mesFiltro !== "TODOS" && t.ym !== mesFiltro) return false;
+    return true;
+  });
+
+  const tot = txs.reduce((s, t) => s + t.amount, 0);
+  titleEl.textContent = categoriaNome;
+  subEl.textContent = `${mesFiltro && mesFiltro !== "TODOS" ? "Mês " + mesFiltro : "Ano Inteiro (Jan-Nov/2026)"} • ${txs.length} lançamentos • Total: ${formatMoeda(tot)}`;
+
+  bodyEl.innerHTML = txs.length > 0
+    ? renderizarListaTransacoesMobileHTML(txs)
+    : `<p class="text-muted text-sm">Nenhum lançamento encontrado.</p>`;
+
+  modal.classList.remove("hidden");
+}
 
 function renderizarTelaRaioX() {
   const btnRanking = document.getElementById("btn-view-ranking");
   const btnMatriz = document.getElementById("btn-view-matriz");
   const viewRanking = document.getElementById("view-ranking-container");
   const viewMatriz = document.getElementById("view-matriz-container");
+
+  // Modal close handlers
+  const modal = document.getElementById("drilldown-modal");
+  const btnCloseModal = document.getElementById("btn-close-drilldown");
+  if (btnCloseModal && modal) {
+    btnCloseModal.onclick = () => modal.classList.add("hidden");
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.classList.add("hidden");
+    };
+  }
 
   btnRanking.onclick = () => {
     btnRanking.classList.add("active");
@@ -617,15 +694,17 @@ function renderizarRankingComDrillDown() {
     if (selHolder !== "TODOS" && t.holder !== selHolder) return false;
     if (selSource !== "TODOS") {
       if (selSource === "CARTAO" && t.tipo !== "CARTAO") return false;
-      if (selSource === "CONTA_CORRENTE" && t.tipo !== "CONTA_CORRENTE") return false;
-      if (selSource === "VALE_ALIMENTACAO" && t.tipo !== "VALE_ALIMENTACAO") return false;
+      if (selSource === "CONTA_CORRENTE" && t.tipo !== "CONTA") return false;
+      if (selSource === "VALE_ALIMENTACAO" && t.tipo !== "VA") return false;
+      if (selSource === "FOLHA" && t.tipo !== "FOLHA") return false;
     }
     if (searchTerm) {
       const matchDesc = (t.desc || "").toLowerCase().includes(searchTerm);
       const matchCat = (t.category || "").toLowerCase().includes(searchTerm);
+      const matchSec = (t.section || "").toLowerCase().includes(searchTerm);
       const matchHolder = (t.holder || "").toLowerCase().includes(searchTerm);
       const matchVal = t.amount.toString().includes(searchTerm);
-      if (!matchDesc && !matchCat && !matchHolder && !matchVal) return false;
+      if (!matchDesc && !matchCat && !matchSec && !matchHolder && !matchVal) return false;
     }
     return true;
   });
@@ -635,31 +714,31 @@ function renderizarRankingComDrillDown() {
   document.getElementById("stats-total").textContent = formatMoeda(totalFiltrado);
   document.getElementById("stats-count").textContent = filteredTxs.length.toLocaleString("pt-BR");
 
-  // 2. Agrupa por categoria
-  const catGroups = {};
-  filteredTxs.forEach((t) => {
-    const cat = t.category || "Outros";
-    if (!catGroups[cat]) {
-      catGroups[cat] = {
-        total: 0,
-        totalGuto: 0,
-        totalJe: 0,
-        txs: [],
-      };
-    }
-    catGroups[cat].total += t.amount;
-    if (t.holder === "AUGUSTO") catGroups[cat].totalGuto += t.amount;
-    else if (t.holder === "JESSICA") catGroups[cat].totalJe += t.amount;
-    catGroups[cat].txs.push(t);
-  });
+  // 2. Agrupa por Seção Canônica -> Categoria (em ordem alfabética)
+  const secoesOrdem = (appData.metadata && appData.metadata.secoes_canonicas) || [
+    "FAMÍLIA", "CLARA", "JÉ", "GUTO", "PETS", "CASA", "PARCELAMENTO CARTÃO & ASSINATURAS", "DESCONTOS EM FOLHA"
+  ];
 
-  // 3. Ordena categorias por maior total
-  const sortedCats = Object.keys(catGroups).sort((a, b) => catGroups[b].total - catGroups[a].total);
+  const secGroups = {};
+  filteredTxs.forEach((t) => {
+    const sec = t.section || "FAMÍLIA";
+    const cat = t.category || "Outros";
+    if (!secGroups[sec]) secGroups[sec] = { total: 0, cats: {} };
+    if (!secGroups[sec].cats[cat]) {
+      secGroups[sec].cats[cat] = { total: 0, totalGuto: 0, totalJe: 0, txs: [] };
+    }
+    secGroups[sec].total += t.amount;
+    secGroups[sec].cats[cat].total += t.amount;
+    if (t.holder === "AUGUSTO") secGroups[sec].cats[cat].totalGuto += t.amount;
+    else if (t.holder === "JESSICA") secGroups[sec].cats[cat].totalJe += t.amount;
+    secGroups[sec].cats[cat].txs.push(t);
+  });
 
   const container = document.getElementById("view-ranking-container");
   container.innerHTML = "";
 
-  if (sortedCats.length === 0) {
+  const activeSecs = secoesOrdem.filter((s) => secGroups[s]);
+  if (activeSecs.length === 0) {
     container.innerHTML = `
       <div class="card text-center py-4">
         <p class="text-muted">Nenhum lançamento encontrado para os filtros selecionados.</p>
@@ -668,144 +747,130 @@ function renderizarRankingComDrillDown() {
     return;
   }
 
-  sortedCats.forEach((catName, idx) => {
-    const grp = catGroups[catName];
-    const pct = totalFiltrado > 0 ? (grp.total / totalFiltrado) * 100 : 0;
+  activeSecs.forEach((secName, secIdx) => {
+    const secData = secGroups[secName];
 
-    const acc = document.createElement("div");
-    acc.className = "cat-accordion";
-
-    // Header do Acordeão
-    acc.innerHTML = `
-      <div class="cat-acc-head">
-        <div class="cat-acc-left">
-          <span class="cat-rank-badge">#${idx + 1}</span>
-          <div class="cat-name-block">
-            <span class="cat-name-title">${catName}</span>
-            <span class="cat-sub-info">
-              ${grp.txs.length} ${grp.txs.length === 1 ? "compra" : "compras"} • 
-              Guto: ${formatMoeda(grp.totalGuto)} | Jé: ${formatMoeda(grp.totalJe)}
-            </span>
-          </div>
-        </div>
-        <div class="cat-acc-right">
-          <div class="cat-total-block">
-            <span class="cat-total-val">${formatMoeda(grp.total)}</span>
-            <span class="cat-pct-label">${pct.toFixed(1)}%</span>
-          </div>
-          <span class="cat-arrow">▼</span>
-        </div>
-      </div>
-      <div class="cat-bar-mini-wrap">
-        <div class="cat-bar-mini" style="width: ${Math.min(pct, 100)}%;"></div>
-      </div>
-      <div class="cat-acc-body">
-        <table class="tx-table">
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Estabelecimento / Descrição</th>
-              <th>Quem / Conta</th>
-              <th>Parcela</th>
-              <th style="text-align: right;">Valor</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${grp.txs
-              .slice()
-              .reverse()
-              .map((t) => {
-                const badgeClass =
-                  t.tipo === "VALE_ALIMENTACAO"
-                    ? "badge-va"
-                    : t.holder === "AUGUSTO"
-                    ? "badge-guto"
-                    : "badge-je";
-                const parcStr = t.inst_cur ? `${t.inst_cur}/${t.inst_tot}` : "-";
-                return `
-                  <tr>
-                    <td>${t.date || t.ym}</td>
-                    <td><strong>${t.desc}</strong></td>
-                    <td><span class="badge-tag ${badgeClass}">${t.holder} (${t.source})</span></td>
-                    <td>${parcStr !== "-" ? `<span class="badge-tag badge-parc">${parcStr}</span>` : "-"}</td>
-                    <td style="text-align: right; font-weight: 700;">${formatMoeda(t.amount)}</td>
-                  </tr>
-                `;
-              })
-              .join("")}
-          </tbody>
-        </table>
-      </div>
+    // Cabeçalho da Seção
+    const secHeader = document.createElement("div");
+    secHeader.className = "sec-group-header";
+    secHeader.innerHTML = `
+      <span>${secIdx + 1}. ${secName}</span>
+      <span class="sec-group-total">${formatMoeda(secData.total)}</span>
     `;
+    container.appendChild(secHeader);
 
-    // Interatividade de abrir/fechar o acordeão
-    const head = acc.querySelector(".cat-acc-head");
-    head.addEventListener("click", () => {
-      acc.classList.toggle("open");
+    // Categorias em ordem alfabética (A-Z) dentro da seção
+    const sortedCats = Object.keys(secData.cats).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    sortedCats.forEach((catName) => {
+      const grp = secData.cats[catName];
+      const pct = totalFiltrado > 0 ? (grp.total / totalFiltrado) * 100 : 0;
+
+      const acc = document.createElement("div");
+      acc.className = "cat-accordion";
+
+      acc.innerHTML = `
+        <div class="cat-acc-head">
+          <div class="cat-acc-left">
+            <div class="cat-name-block">
+              <span class="cat-name-title">${catName}</span>
+              <span class="cat-sub-info">
+                ${grp.txs.length} ${grp.txs.length === 1 ? "lançamento" : "lançamentos"} • 
+                Guto: ${formatMoeda(grp.totalGuto)} | Jé: ${formatMoeda(grp.totalJe)}
+              </span>
+            </div>
+          </div>
+          <div class="cat-acc-right">
+            <div class="cat-total-block">
+              <span class="cat-total-val">${formatMoeda(grp.total)}</span>
+              <span class="cat-pct-label">${pct.toFixed(1)}%</span>
+            </div>
+            <span class="cat-arrow">▼</span>
+          </div>
+        </div>
+        <div class="cat-bar-mini-wrap">
+          <div class="cat-bar-mini" style="width: ${Math.min(pct, 100)}%;"></div>
+        </div>
+        <div class="cat-acc-body">
+          ${renderizarListaTransacoesMobileHTML(grp.txs)}
+        </div>
+      `;
+
+      const head = acc.querySelector(".cat-acc-head");
+      head.addEventListener("click", () => {
+        acc.classList.toggle("open");
+      });
+
+      container.appendChild(acc);
     });
-
-    container.appendChild(acc);
   });
 }
 
 function renderizarMatrizPanoramica() {
   const container = document.getElementById("view-matriz-container");
-  const catsResumo = appData.categorias_resumo || [];
-  if (catsResumo.length === 0) return;
+  const secoesResumo = appData.secoes_resumo || [];
+  if (secoesResumo.length === 0) return;
 
   const meses = [
-    "2026-01",
-    "2026-02",
-    "2026-03",
-    "2026-04",
-    "2026-05",
-    "2026-06",
-    "2026-07",
-    "2026-08",
-    "2026-09",
-    "2026-10",
-    "2026-11",
+    "2026-11", "2026-10", "2026-09", "2026-08", "2026-07",
+    "2026-06", "2026-05", "2026-04", "2026-03", "2026-02", "2026-01"
   ];
-
   const mesesHeaders = [
-    "Jan",
-    "Fev",
-    "Mar",
-    "Abr",
-    "Mai",
-    "Jun",
-    "Jul",
-    "Ago",
-    "Set",
-    "Out",
-    "Nov",
+    "Nov", "Out", "Set", "Ago", "Jul", "Jun", "Mai", "Abr", "Mar", "Fev", "Jan"
   ];
 
+  // Colunas Total 2026 e Média/Mês logo após a Categoria para leitura imediata no celular!
   let html = `
     <table class="matriz-table">
       <thead>
         <tr>
           <th>Categoria</th>
-          ${mesesHeaders.map((m) => `<th>${m}</th>`).join("")}
           <th style="background: rgba(56, 189, 248, 0.1);">Total 2026</th>
           <th style="background: rgba(16, 185, 129, 0.1);">Média/Mês</th>
+          ${mesesHeaders.map((m) => `<th>${m}</th>`).join("")}
         </tr>
       </thead>
       <tbody>
   `;
 
-  catsResumo.forEach((c) => {
+  secoesResumo.forEach((sec) => {
     html += `
-      <tr>
-        <td>${c.categoria}</td>
+      <tr class="matriz-sec-row">
+        <td colspan="${3 + meses.length}">${sec.secao}</td>
+      </tr>
+    `;
+
+    const cats = (sec.categorias || []).slice().sort((a, b) => a.categoria.localeCompare(b.categoria, "pt-BR"));
+    cats.forEach((c) => {
+      const safeCat = c.categoria.replace(/"/g, "&quot;");
+      html += `
+        <tr>
+          <td class="matriz-cell-clickable" data-cat="${safeCat}" data-ym="TODOS">${c.categoria}</td>
+          <td class="col-total matriz-cell-clickable" data-cat="${safeCat}" data-ym="TODOS">${formatMoeda(c.total_ano)}</td>
+          <td class="col-media">${formatMoeda(c.media_mes)}</td>
+          ${meses
+            .map((ym) => {
+              const v = c.por_mes[ym] || 0;
+              if (v > 0) {
+                return `<td class="matriz-cell-clickable" data-cat="${safeCat}" data-ym="${ym}">${formatMoeda(v)}</td>`;
+              }
+              return `<td>-</td>`;
+            })
+            .join("")}
+        </tr>
+      `;
+    });
+
+    html += `
+      <tr class="matriz-sub-row">
+        <td>Subtotal ${sec.secao}</td>
+        <td class="col-total">${formatMoeda(sec.total_ano)}</td>
+        <td class="col-media">${formatMoeda(sec.media_mes)}</td>
         ${meses
           .map((ym) => {
-            const v = c.por_mes[ym] || 0;
-            return `<td>${v > 0 ? formatMoeda(v) : "-"}</td>`;
+            const sv = (sec.subtotal_por_mes && sec.subtotal_por_mes[ym]) || 0;
+            return `<td>${sv > 0 ? formatMoeda(sv) : "-"}</td>`;
           })
           .join("")}
-        <td class="col-total">${formatMoeda(c.total_ano)}</td>
-        <td class="col-media">${formatMoeda(c.media_mes)}</td>
       </tr>
     `;
   });
@@ -816,6 +881,15 @@ function renderizarMatrizPanoramica() {
   `;
 
   container.innerHTML = html;
+
+  // Bind click drill-down em todas as células clicáveis da Matriz Panorâmica
+  container.querySelectorAll(".matriz-cell-clickable").forEach((cell) => {
+    cell.addEventListener("click", () => {
+      const cat = cell.dataset.cat;
+      const ym = cell.dataset.ym;
+      abrirModalDrillDown(cat, ym);
+    });
+  });
 }
 
 // ==============================================================================

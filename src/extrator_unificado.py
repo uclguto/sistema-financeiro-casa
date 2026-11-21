@@ -291,30 +291,123 @@ VA_HISTORICO_DEBITOS = [
 ]
 
 
-def categorize_card_tx(desc):
-    """Classifica compras de cartão nas 20 categorias auditadas do projeto."""
+SECOES_CANONICAS = [
+    "FAMÍLIA",
+    "CLARA",
+    "JÉ",
+    "GUTO",
+    "PETS",
+    "CASA",
+    "PARCELAMENTO CARTÃO & ASSINATURAS",
+    "DESCONTOS EM FOLHA",
+]
+
+
+def categorize_card_tx(desc, holder="AUGUSTO"):
+    """Classifica compras de cartão nas 8 seções canônicas da planilha original."""
     d = desc.upper()
+    # 7. PARCELAMENTO CARTÃO & ASSINATURAS - Assinaturas individuais
+    if "AMAZON PRIME" in d or "AMAZONPRIMEBR" in d or "AMAZON DIGITAL" in d or "AMAZON AD FREE" in d:
+        return ("PARCELAMENTO CARTÃO & ASSINATURAS", "Amazon Prime")
+    if "AQUARIUS" in d:
+        return ("PARCELAMENTO CARTÃO & ASSINATURAS", "Aquarius Streaming")
+    if "KOTAS" in d:
+        return ("PARCELAMENTO CARTÃO & ASSINATURAS", "Asaas Kotas")
+    if "GOOGLE ONE" in d or "G1AI101M" in d:
+        return ("PARCELAMENTO CARTÃO & ASSINATURAS", "Google One")
+    if "IFOOD CLUB" in d:
+        return ("PARCELAMENTO CARTÃO & ASSINATURAS", "iFood Club")
+    if "MELIMAIS" in d:
+        return ("PARCELAMENTO CARTÃO & ASSINATURAS", "Meli+ (Mercado Livre)")
+    if "NETFLIX" in d:
+        return ("PARCELAMENTO CARTÃO & ASSINATURAS", "Netflix")
+    if "NUBANK+" in d:
+        return ("PARCELAMENTO CARTÃO & ASSINATURAS", "Nubank+")
     if "UBER ONE" in d:
-        return "05. Assinaturas, Streaming, Clubes & Cloud"
+        return ("PARCELAMENTO CARTÃO & ASSINATURAS", "Uber One")
+    if "YOUTUBE" in d:
+        return ("PARCELAMENTO CARTÃO & ASSINATURAS", "YouTube Premium")
+
+    # 7. Outros de Parcelamento/Encargos/Recargas
+    if any(k in d for k in ["BUDCOM", "FERNANDODESOUZA"]):
+        return ("PARCELAMENTO CARTÃO & ASSINATURAS", "Grandes Parcelamentos")
+    if any(k in d for k in ["99PAYAUGUSTOSIMON"]):
+        return ("PARCELAMENTO CARTÃO & ASSINATURAS", "Recarga/Pix Cartão 99Pay")
+
+    # 4. GUTO / 3. JÉ - Mobilidade
     if any(k in d for k in ["UBER", "99APP", "99 RIDE", "99*99", "DL*99", "PG *99", "DL *99"]):
-        return "01. Uber e 99 (Corridas no Cartão)"
+        if holder == "JESSICA":
+            return ("JÉ", "Uber / 99 Jé")
+        return ("GUTO", "Uber / 99 Guto")
+
+    # 1. FAMÍLIA - Transporte geral / Patinetes / Aluguel de Carro / Combustível
     if any(k in d for k in ["JET PATINETES", "URENTCAR", "MP PATINETES", "BIKE ORLA"]):
-        return "02. Patinetes e Bikes (Jet/Urentcar)"
-    if d == "EGR" or any(k in d for k in ["LOCALIZA", "UNIDAS", "POSTO ", "COMERCIAL DE COMBUSTIV", "PRADO COMERCIO DE COMB", "ESTAC ", "ESTACIONAMENTO", "ESTAFACIL", "TOTAL PARQUE", "MULTIPLAN", "VIASUL", "UNESUL"]):
-        return "03. Aluguel Carro / Combustível / Estacionamento"
-    if any(k in d for k in ["NINTENDO", "STEAM", "MAGIC GAMES", "DRCXGAMES", "BIGPLUSH", "WOW PARK"]):
-        return "04. Jogos, Games & Parques (Nintendo/Steam/etc.)"
-    if any(k in d for k in ["YOUTUBE", "NETFLIX", "MELIMAIS", "AMAZON PRIME", "AMAZONPRIMEBR", "AMAZON DIGITAL", "AMAZON AD FREE", "GOOGLE ONE", "G1AI101M", "KOTAS", "AQUARIUS", "QUINDIM", "CANVA", "IFOOD CLUB", "NUBANK+", "REPLICATE", "GOOGLE CLOUD", "OPENROUTER", "GYM DAY WORKOU"]):
-        return "05. Assinaturas, Streaming, Clubes & Cloud"
-    if any(k in d for k in ["BARU COZINHA"]):
-        return "06. Baru Cozinha (Almoços/Restaurante frequente)"
+        return ("FAMÍLIA", "Patinetes e Transporte Geral")
+    if any(k in d for k in ["LOCALIZA", "UNIDAS"]):
+        return ("FAMÍLIA", "Aluguel de Carro")
+    if d == "EGR" or any(k in d for k in ["POSTO ", "COMERCIAL DE COMBUSTIV", "PRADO COMERCIO DE COMB", "ESTAC ", "ESTACIONAMENTO", "ESTAFACIL", "TOTAL PARQUE", "MULTIPLAN", "VIASUL", "UNESUL"]):
+        return ("FAMÍLIA", "Gasolina, Estac. e Pedágio")
+
+    # 4. GUTO - Jogos digitais/consoles vs 1. FAMÍLIA - Parques/Passeios
+    if any(k in d for k in ["NINTENDO", "STEAM", "DRCXGAMES"]):
+        return ("GUTO", "Jogos (Nintendo / Steam / Console)")
+    if any(k in d for k in ["MAGIC GAMES", "BIGPLUSH", "WOW PARK", "ECOLAND", "SYMPLA", "CINESYSTEM", "PEDALINHO", "TREM EXPRESSO", "PRAIA DE BELAS", "FARRAPOS"]):
+        return ("FAMÍLIA", "Lazer, Parques e Passeios")
+
+    # 2. CLARA - Livros / Roupas / Brinquedos
+    if any(k in d for k in ["QUINDIM", "FTD LUMISFERA"]):
+        return ("CLARA", "Clube Quindim e Livros")
+    if any(k in d for k in ["BIBI CALCADOS", "CANTAROLA"]):
+        return ("CLARA", "Roupas e Calçados Clara")
+    if any(k in d for k in ["SUPERLEGAL", "E FRANCA BRINQUEDOS", "SCHIZZIBOOKS", "CASA DO PAPEL", "CASA DO ESTUDANTE", "AQUARELLA PAPER"]):
+        return ("CLARA", "Brinquedos e Papelaria Clara")
+
+    # 3. JÉ - Ferramentas, CFC, Estética, Saúde, Livros, Roupas
+    if "CANVA" in d:
+        return ("JÉ", "Canva e Ferramentas Jé")
+    if "CFC ATLANTICA" in d:
+        return ("JÉ", "CFC / Autoescola Jé")
+    if any(k in d for k in ["ESPACOLASER", "BELSHOP", "OBOTICARIO", "NATURA", "BELEZANAWEB"]):
+        return ("JÉ", "Cosméticos e Estética Jé")
+    if any(k in d for k in ["ODONTOLOGIA", "SERMAF", "SERMAIS", "ESPACOTERAPEUTICO"]):
+        return ("JÉ", "Exames, Odonto e Saúde Jé")
+    if any(k in d for k in ["LIVRARIA", "ESTANTE V"]):
+        return ("JÉ", "Livros e Cursos Jé")
+
+    # 4. GUTO - Informática/IA, Cursos, Saúde/Esporte
+    if any(k in d for k in ["REPLICATE", "GOOGLE CLOUD", "OPENROUTER", "HAPPYTEC"]):
+        return ("GUTO", "Informática, IA e Cloud")
+    if any(k in d for k in ["KIWIFY", "CURSOTR ABT", "RWR CURSOS"]):
+        return ("GUTO", "Kiwify, Cursos e Livros Guto")
+    if any(k in d for k in ["GYM DAY WORKOU", "ACADEMIA CORPO", "WEBURN", "DIASTASE", "VIVAMAISVIDA", "CIRKULA"]):
+        return ("GUTO", "Barbearia, Esporte e Saúde Guto")
+
+    # 5. PETS
+    if any(k in d for k in ["FINPET", "VETERINARIA", "CATS INDOOR"]):
+        return ("PETS", "Veterinária e Finpet")
+    if any(k in d for k in ["COBASI", "AGROPECUARIA", "AGROPET"]):
+        return ("PETS", "Cobasi, Ração e Petshops")
+
+    # 6. CASA
+    if "LAVANDERIA" in d:
+        return ("CASA", "Faxina, Diarista e Lavanderia")
+    if any(k in d for k in ["GRUPO HERVAL", "ORTOBOM", "LEROY MERLIN", "CASA MARIA", "FERRAMULTI", "STARFERRA", "AGUA E SOL PISCINAS"]):
+        return ("CASA", "Móveis, Eletros e Reforma")
+
+    # 1. FAMÍLIA - Alimentação
     if any(k in d for k in ["IFD", "IFOOD", "ZE DELIVERY", "ZÉ DELIVERY"]):
-        return "07. Delivery (iFood / Zé Delivery)"
+        return ("FAMÍLIA", "Delivery (iFood / Zé)")
+    if any(k in d for k in ["BARU COZINHA"]):
+        return ("FAMÍLIA", "Restaurantes e Lanches")
     if any(k in d for k in [
         "CAFETERIA", "MUSA VELUTIN", "CAFE ", "BAGGIO", "CHEIRIN BAO", "TURISPRESSO", "MESTER CAFE",
         "HAVANNA", "CREMOLATTO", "GELATERIA", "GIANLUCA", "SORVETE", "SANTO GELATO", "PAYGO MEUT SORVETES",
         "PICOLE", "MILKY MOO", "CHOCOLATRAS", "CHOCOLATAR", "CACAU SHOW", "DOCERIA", "DOCES", "ACUCARADUS",
-        "COCCADERIA", "BROOKIES", "PAIXAO GASTRONOMIA", "BARCELOS GASTRONOMIA", "TERRA GASTRONOMIA",
+        "COCCADERIA", "BROOKIES"
+    ]):
+        return ("FAMÍLIA", "Cafés, Padarias e Doces")
+    if any(k in d for k in [
+        "PAIXAO GASTRONOMIA", "BARCELOS GASTRONOMIA", "TERRA GASTRONOMIA",
         "PIZZARIA", "CHIAIA", "LANCHERA", "LANCHERIA", "FORMIGALANCHE", "DUDAS LANCHES", "ANTONIO LANCHES",
         "CACHORRAO", "CACHORRO QUENTE", "MINI KALZONE", "POKE", "BAURU", "RESTAURANTE", "JOHANN",
         "GASTROPUB", "DIEFENBROS", "MUNAY", "ALFFREDO", "LA PERSONA", "BAOZI", "PASTEIS", "PASTEL",
@@ -323,55 +416,54 @@ def categorize_card_tx(desc):
         "DONA NINA", "BARRANCO", "SAMBO SUSHI", "TEMAKI", "CASA LEE", "MEP FOOD HALL", "JARDIM MADA",
         "TIPO EXPORTACAO", "LPM GOURMET", "L E COMERCIO DE ALIMEN", "PAULO KREPS ALIMENTOS"
     ]):
-        return "08. Restaurantes, Cafés, Padarias, Lanches e Doces"
+        return ("FAMÍLIA", "Restaurantes e Lanches")
+    if any(k in d for k in ["CASA DE CARNES", "ACOUGUE", "SAN REMO"]):
+        return ("FAMÍLIA", "Açougue e Peixaria")
+    if any(k in d for k in [
+        "BANCA ", "BANANA", "BANACECHINEL", "PRODUTOS COLONIAIS", "DIRETO DA ROCA", "GUILARDI",
+        "VERDURA", "FRUTAS", "VANERLEI", "SILVANEMARIA", "53591966SILVANE"
+    ]):
+        return ("FAMÍLIA", "Feira e Hortifruti")
     if any(k in d for k in [
         "ZAFFARI", "ASUN", "MACROMIX", "SUPERBOM SUPERMERCADO", "MERCADOPROGRESSO", "ARMAZEM",
-        "BANCA ", "BANANA", "BANACECHINEL", "PRODUTOS COLONIAIS", "DIRETO DA ROCA", "GUILARDI",
-        "VERDURA", "FRUTAS", "CEREAIS", "MERCEARIA", "MERCADO GETULIO", "SUPREMAMASTER", "DALACORTE",
-        "OFERTORIO", "CASA DE CARNES", "MONACO COMERCIO", "62882654VICTOR", "VANERLEI", "SILVANEMARIA",
-        "53591966SILVANE", "ELIANEMTCASQUEIRO", "DANIEL AGLIARDI"
+        "CEREAIS", "MERCEARIA", "MERCADO GETULIO", "SUPREMAMASTER", "DALACORTE",
+        "OFERTORIO", "MONACO COMERCIO", "62882654VICTOR", "ELIANEMTCASQUEIRO", "DANIEL AGLIARDI"
     ]):
-        return "09. Supermercado, Açougue, Feira e Hortifruti (Cartão)"
-    if any(k in d for k in ["COBASI", "FINPET", "AGROPECUARIA", "AGROPET", "VETERINARIA", "CATS INDOOR"]):
-        return "10. Pets (Cobasi / Finpet / Veterinária)"
-    if any(k in d for k in ["CURSOTR ABT", "CFC ATLANTICA", "FTD LUMISFERA", "KIWIFY", "RWR CURSOS", "WEBURN", "DIASTASE", "VIVAMAISVIDA", "CIRKULA"]):
-        return "11. Cursos, Educação, Autoescola (CFC) e Saúde/Fitness"
-    if any(k in d for k in ["PANVEL", "RAIA", "DROGABEM", "FARMACIA", "FARMATEC", "COMERCIAL SAO JOAO", "ODONTOLOGIA", "SERMAF", "SERMAIS", "ESPACOLASER", "ACADEMIA CORPO", "ESPACOTERAPEUTICO"]):
-        return "12. Farmácia, Exames, Odonto e Estética (EspaçoLaser)"
-    if any(k in d for k in ["LAVANDERIA"]):
-        return "13. Lavanderia"
+        return ("FAMÍLIA", "Supermercado (Zaffari / Asun)")
+    if any(k in d for k in ["PANVEL", "RAIA", "DROGABEM", "FARMACIA", "FARMATEC", "COMERCIAL SAO JOAO"]):
+        return ("FAMÍLIA", "Farmácia")
+
+    # 3. JÉ vs 4. GUTO - Vestuário e Joias
     if any(k in d for k in [
-        "VIVARA", "RENNER", "HERING", "SHEIN", "CENTAURO", "NETSHOES", "361 SPORTS", "BIBI CALCADOS",
-        "LILOFRAN", "MENINASHOES", "DUBELAS", "CANTAROLA", "CLAY MODEL", "BELSHOP", "OBOTICARIO",
-        "NATURA", "BELEZANAWEB", "POMPEIA", "SH TOTAL", "SH PRAIA DE BEL", "PRATAS", "DVARGASPRATAS",
-        "BOUTIQUE DA COSTURA", "I C COMERCIO DO VESTUA", "CIACIRCUL", "MOODCOMERCIODE", "HEM PRAIA"
+        "VIVARA", "RENNER", "HERING", "SHEIN", "CENTAURO", "NETSHOES", "361 SPORTS",
+        "LILOFRAN", "MENINASHOES", "DUBELAS", "CLAY MODEL", "POMPEIA", "SH TOTAL", "SH PRAIA DE BEL",
+        "PRATAS", "DVARGASPRATAS", "BOUTIQUE DA COSTURA", "I C COMERCIO DO VESTUA", "CIACIRCUL", "MOODCOMERCIODE", "HEM PRAIA"
     ]):
-        return "14. Vestuário, Calçados, Joias (Vivara) e Beleza"
-    if any(k in d for k in ["GRUPO HERVAL", "ORTOBOM", "LEROY MERLIN", "CASA MARIA", "FERRAMULTI", "STARFERRA", "AGUA E SOL PISCINAS"]):
-        return "15. Casa, Móveis (Herval/Ortobom) e Reforma (Leroy)"
-    if any(k in d for k in ["99PAYAUGUSTOSIMON"]):
-        return "16. Recarga/Pix Cartão via 99Pay"
-    if any(k in d for k in ["BUDCOM", "FERNANDODESOUZA"]):
-        return "17. Grandes Parcelamentos (Budcomercio / Fernando de Souza)"
-    if any(k in d for k in [
-        "AMAZON", "MERCADOLIVRE", "MERCADO MERCADOLIVR", "SHOPEE", "AMERICANAS", "SUPERLEGAL",
-        "CASA DO PAPEL", "CASA DO ESTUDANTE", "AQUARELLA PAPER", "LIVRARIA", "ESTANTE V",
-        "SCHIZZIBOOKS", "GOCASE", "E FRANCA BRINQUEDOS", "MIX BAZAR", "HAPPYTEC", "YANG CHUN", "QINGJIN HUANG"
-    ]):
-        return "18. Compras Online (Amazon/ML/Shopee), Papelaria e Brinquedos"
-    if any(k in d for k in ["ECOLAND", "SYMPLA", "CINESYSTEM", "PEDALINHO", "TREM EXPRESSO", "PRAIA DE BELAS", "FARRAPOS"]):
-        return "19. Passeios, Viagens (Ecoland), Cinema e Eventos"
-    return "20. Outros Comércios Locais / Diversos"
+        if holder == "AUGUSTO" and any(k in d for k in ["CENTAURO", "NETSHOES", "361 SPORTS"]):
+            return ("GUTO", "Roupas e Calçados Guto")
+        if holder == "AUGUSTO" and not any(k in d for k in ["VIVARA", "SHEIN", "DUBELAS", "MENINASHOES", "LILOFRAN", "BOUTIQUE DA COSTURA"]):
+            return ("GUTO", "Roupas e Calçados Guto")
+        return ("JÉ", "Roupas, Calçados e Joias Jé")
+
+    # 1. FAMÍLIA - Compras Online / Diversos
+    if any(k in d for k in ["AMAZON", "MERCADOLIVRE", "MERCADO MERCADOLIVR", "SHOPEE", "AMERICANAS", "GOCASE", "MIX BAZAR", "YANG CHUN", "QINGJIN HUANG"]):
+        return ("FAMÍLIA", "Compras Online e Diversos")
+
+    return ("FAMÍLIA", "Compras Online e Diversos")
 
 
 def categorize_va_tx(desc):
-    """Classifica despesas do Vale-Alimentação."""
+    """Classifica despesas do Vale-Alimentação nas seções da planilha."""
     d = desc.upper()
     if any(k in d for k in ["ZAFFARI", "ASUN", "CARREFOUR", "MERCADO PROGRESSO", "B12 ARMAZEM", "ASSB COMERCIO"]):
-        return "26. Vale-Alimentação: Zaffari Total"
+        return ("FAMÍLIA", "Supermercado (Zaffari / Asun)")
     if any(k in d for k in ["TROPEIRO VELHO", "BANACECHINEL", "VANERLEI", "JFA PRODUTOS", "DIRETO DA ROCA", "JOAO FEIRANTE", "BANCA DA VERDURA", "SILVANEMARIA", "ALCEUVIEIRADE", "JORGE ALVARES", "GUILARDI", "F M MORAES"]):
-        return "27. Vale-Alimentação: Feira de Rua de Sábado"
-    return "28. Vale-Alimentação: Farmácia / Restaurantes / Cafés"
+        return ("FAMÍLIA", "Feira e Hortifruti")
+    if any(k in d for k in ["ACOUGUE", "SAN REMO", "ALFFREDO CARNES"]):
+        return ("FAMÍLIA", "Açougue e Peixaria")
+    if "PANVEL" in d:
+        return ("FAMÍLIA", "Farmácia")
+    return ("FAMÍLIA", "Cafés, Padarias e Doces")
 
 
 def executar_extracao():
@@ -438,13 +530,14 @@ def executar_extracao():
                     m_inst = re.search(r"\b(\d{2})/(\d{2})\b", desc_clean)
                     inst_cur = int(m_inst.group(1)) if m_inst else None
                     inst_tot = int(m_inst.group(2)) if m_inst else None
-                    cat = categorize_card_tx(desc_clean)
+                    sec, cat = categorize_card_tx(desc_clean, current_holder)
                     all_card_txs.append({
                         "source": f"Banrisul_{card}",
                         "bill_ym": bill_ym,
                         "date": dt,
                         "holder": current_holder,
                         "subcard": current_subcard,
+                        "section": sec,
                         "category": cat,
                         "desc": desc_clean,
                         "amount": val,
@@ -463,13 +556,14 @@ def executar_extracao():
             m_inst = re.search(r"Parcela\s+(\d+)/(\d+)", title, re.IGNORECASE)
             inst_cur = int(m_inst.group(1)) if m_inst else None
             inst_tot = int(m_inst.group(2)) if m_inst else None
-            cat = categorize_card_tx(title)
+            sec, cat = categorize_card_tx(title, "AUGUSTO")
             all_card_txs.append({
                 "source": "Nubank_Card",
                 "bill_ym": bill_ym,
                 "date": r.get("date", ""),
                 "holder": "AUGUSTO",
                 "subcard": "NUBANK",
+                "section": sec,
                 "category": cat,
                 "desc": title,
                 "amount": amt,
@@ -515,20 +609,30 @@ def executar_extracao():
                         nome = lines[i + 1].replace("NOME:", "").strip()
                         i += 1
                     
-                    # Categorização de Conta Corrente
-                    cat = "Outros Débitos Conta"
+                    # Categorização de Conta Corrente nas 8 Seções
+                    sec, cat = ("FAMÍLIA", "Outros Débitos Conta")
                     desc_u = desc.upper()
                     nome_u = nome.upper()
                     if "COL.BOM CONSELHO" in desc_u or "BOM CONSELHO" in nome_u:
-                        cat = "21. Colégio Nossa Senhora do Bom Conselho (Clara)"
+                        sec, cat = ("CLARA", "CBC Mensalidade")
                     elif "PAGAMENTO BOLETO" in desc_u and int(cur_day if cur_day.isdigit() else 0) < 20 and not ("BOM CONSELHO" in nome_u):
-                        cat = "22. Condomínio, Aluguel e Boletos Casa (Dia 10)"
-                    elif "PGTO NET" in desc_u or "COMPANHIA ESTADUAL" in nome_u or "IPTU" in desc_u:
-                        cat = "23. Energia (CEEE), Internet (Claro/NET) e IPTU"
-                    elif "THIAGO DALLO" in nome_u or "LUIZ ANTONIO" in nome_u or "CAROLINE CEZIMBRA" in nome_u or "MATHEUS ROBERTO" in nome_u:
-                        cat = "24. Pix Recorrentes (Thiago Dallo / Luiz Antonio / Outros)"
+                        sec, cat = ("CASA", "Aluguel, Condomínio e IPTU")
+                    elif "IPTU" in desc_u:
+                        sec, cat = ("CASA", "Aluguel, Condomínio e IPTU")
+                    elif "PGTO NET" in desc_u:
+                        sec, cat = ("CASA", "Internet e Celular (Claro)")
+                    elif "COMPANHIA ESTADUAL" in nome_u:
+                        sec, cat = ("CASA", "Luz (CEEE Equatorial)")
+                    elif "THIAGO DALLO" in nome_u:
+                        sec, cat = ("GUTO", "Análise e Terapia Guto")
+                    elif "LUIZ ANTONIO" in nome_u:
+                        sec, cat = ("GUTO", "Luizinho (Pix Fixo)")
+                    elif "CAROLINE CEZIMBRA" in nome_u:
+                        sec, cat = ("JÉ", "Livros e Cursos Jé")
+                    elif "MATHEUS ROBERTO" in nome_u:
+                        sec, cat = ("CASA", "Faxina, Diarista e Lavanderia")
                     elif "IOF" in desc_u or "JUROS" in desc_u:
-                        cat = "25. Juros e IOF Cheque Especial Banrisul"
+                        sec, cat = ("PARCELAMENTO CARTÃO & ASSINATURAS", "Juros, IOF e Encargos")
 
                     banrisul_cc.append({
                         "ym": cur_ym,
@@ -537,6 +641,7 @@ def executar_extracao():
                         "doc": doc,
                         "amount": val,
                         "nome": nome,
+                        "section": sec,
                         "category": cat
                     })
             i += 1
@@ -551,6 +656,7 @@ def executar_extracao():
             "date": t["date"],
             "source": t["source"],
             "holder": t["holder"],
+            "section": t["section"],
             "category": t["category"],
             "desc": t["desc"],
             "amount": t["amount"],
@@ -575,6 +681,7 @@ def executar_extracao():
             "date": f"{t['day']}/{t['ym'][5:]}",
             "source": "Banrisul_CC",
             "holder": "AUGUSTO",
+            "section": t["section"],
             "category": t["category"],
             "desc": f"{t['desc']} {t['nome']}".strip(),
             "amount": val,
@@ -585,12 +692,13 @@ def executar_extracao():
 
     # 3.3 Adiciona as 148 transações do Vale-Alimentação
     for ym, dt, desc, val in VA_HISTORICO_DEBITOS:
-        cat = categorize_va_tx(desc)
+        sec, cat = categorize_va_tx(desc)
         todas_transacoes.append({
             "ym": ym,
             "date": dt,
             "source": "Vale_Alimentacao",
             "holder": "AUGUSTO",
+            "section": sec,
             "category": cat,
             "desc": desc,
             "amount": val,
@@ -598,6 +706,51 @@ def executar_extracao():
             "inst_tot": None,
             "tipo": "VA"
         })
+
+    # 3.4 Adiciona Descontos em Folha dos Contracheques (Ago, Set, Out/2026)
+    for k, pages in sorted(pdfs_text.items()):
+        if not k.startswith("Contracheque"):
+            continue
+        txt_cc = "\n".join(pages)
+        m_comp = re.search(r"Competencia:\s*(\d{2})/(\d{4})", txt_cc)
+        if not m_comp:
+            continue
+        ym_folha = f"{m_comp.group(2)}-{m_comp.group(1)}"
+        folha_map = [
+            ("INSS NORMAL", "IRRF e INSS (Retidos na Fonte)"),
+            ("IMPOSTO DE RENDA", "IRRF e INSS (Retidos na Fonte)"),
+            ("IMPOSTO RENDA - PLR/PPR", "IRRF e INSS (Retidos na Fonte)"),
+            ("MENSALIDADE SINDICAL", "Seguro de Vida e Sindicato"),
+            ("CONTRIBUIC NEGOCIAL", "Seguro de Vida e Sindicato"),
+            ("CONTRIBUIC NEGOCIAL PLR", "Seguro de Vida e Sindicato"),
+            ("FBPREV CD CTA IND", "Previdência Privada (FBPREV)"),
+            ("FBPREV CD CTA RISCO", "Seguro de Vida e Sindicato"),
+            ("CONTRIBUICAO PAM", "CABERGS Plano Médico e Odonto"),
+            ("CONTRIB / TX INSCR POD", "CABERGS Plano Médico e Odonto"),
+            ("TPD PAM", "CABERGS Consultas (Coparticipação)"),
+            ("TPD ODONTO", "CABERGS Consultas (Coparticipação)"),
+        ]
+        for line in txt_cc.splitlines():
+            line_s = line.strip()
+            for kw, cat_folha in folha_map:
+                if line_s.startswith(kw):
+                    m_v = re.search(r"([\d\.]+,\d{2})$", line_s)
+                    if m_v:
+                        val_f = parse_br_num(m_v.group(1))
+                        todas_transacoes.append({
+                            "ym": ym_folha,
+                            "date": f"01/{ym_folha[5:]}",
+                            "source": "Contracheque",
+                            "holder": "AUGUSTO",
+                            "section": "DESCONTOS EM FOLHA",
+                            "category": cat_folha,
+                            "desc": kw,
+                            "amount": val_f,
+                            "inst_cur": None,
+                            "inst_tot": None,
+                            "tipo": "FOLHA"
+                        })
+                    break
 
     # 4. CONSOLIDAÇÃO MÊS A MÊS E MATRIZ DE CATEGORIAS
     meses = [f"2026-{m:02d}" for m in range(1, 12)]
@@ -655,6 +808,7 @@ def executar_extracao():
 
         va_in = sum(c["amount"] for c in VA_HISTORICO_CREDITOS if c["ym"] == ym)
         va_out = sum(t["amount"] for t in todas_transacoes if t["ym"] == ym and t["tipo"] == "VA")
+        descontos_folha = sum(t["amount"] for t in todas_transacoes if t["ym"] == ym and t["tipo"] == "FOLHA")
 
         resumo_mensal.append({
             "mes": ym,
@@ -673,14 +827,20 @@ def executar_extracao():
             "pix_thiago": pix_thiago,
             "pix_luiz": pix_luiz,
             "va_credito": va_in,
-            "va_gasto_total": va_out
+            "va_gasto_total": va_out,
+            "descontos_folha": descontos_folha
         })
 
-    # 5. MATRIZ COMPLETA DE CATEGORIAS
-    todas_categorias = sorted(list(set(t["category"] for t in todas_transacoes)))
+    # 5. MATRIZ COMPLETA DE SEÇÕES & CATEGORIAS (8 SEÇÕES CANÔNICAS EM ORDEM ALFABÉTICA)
+    cat_to_sec = {}
+    for t in todas_transacoes:
+        cat_to_sec[t["category"]] = t.get("section", "FAMÍLIA")
+
+    todas_categorias = sorted(list(cat_to_sec.keys()), key=lambda c: (SECOES_CANONICAS.index(cat_to_sec[c]) if cat_to_sec[c] in SECOES_CANONICAS else 99, c.lower()))
     categorias_resumo = []
-    
+
     for cat in todas_categorias:
+        sec = cat_to_sec[cat]
         txs_cat = [t for t in todas_transacoes if t["category"] == cat]
         tot_ano = sum(t["amount"] for t in txs_cat)
         tot_guto = sum(t["amount"] for t in txs_cat if t["holder"] == "AUGUSTO")
@@ -688,8 +848,9 @@ def executar_extracao():
         por_mes = {}
         for ym in meses:
             por_mes[ym] = sum(t["amount"] for t in txs_cat if t["ym"] == ym)
-        
+
         categorias_resumo.append({
+            "secao": sec,
             "categoria": cat,
             "total_ano": tot_ano,
             "media_mes": tot_ano / len(meses),
@@ -698,7 +859,21 @@ def executar_extracao():
             "por_mes": por_mes
         })
 
-    categorias_resumo.sort(key=lambda x: -x["total_ano"])
+    # Agrupa por seção canônica com categorias em ordem alfabética
+    secoes_resumo = []
+    for sec_name in SECOES_CANONICAS:
+        cats_sec = sorted([c for c in categorias_resumo if c["secao"] == sec_name], key=lambda x: x["categoria"].lower())
+        if not cats_sec:
+            continue
+        sub_por_mes = {ym: sum(c["por_mes"].get(ym, 0.0) for c in cats_sec) for ym in meses}
+        tot_sec = sum(c["total_ano"] for c in cats_sec)
+        secoes_resumo.append({
+            "secao": sec_name,
+            "total_ano": tot_sec,
+            "media_mes": tot_sec / len(meses),
+            "subtotal_por_mes": sub_por_mes,
+            "categorias": cats_sec
+        })
 
     # 6. SEMÁFOROS ATUAIS (NOVEMBRO/2026 CALCULADOS DAS TRANSAÇÕES REAIS)
     nov_txs = [t for t in todas_transacoes if t["ym"] == "2026-11"]
@@ -711,20 +886,20 @@ def executar_extracao():
 
     # Comer Fora em Novembro
     cf_nov_total = sum(t["amount"] for t in nov_txs if t["category"] in (
-        "06. Baru Cozinha (Almoços/Restaurante frequente)",
-        "07. Delivery (iFood / Zé Delivery)",
-        "08. Restaurantes, Cafés, Padarias, Lanches e Doces"
+        "Restaurantes e Lanches",
+        "Delivery (iFood / Zé)",
+        "Cafés, Padarias e Doces"
     ))
     cf_nov_semana = cf_nov_total / 2.0  # Novembro tem 2 semanas auditadas (dia 01 a 14)
 
     # Uber em Novembro
-    ug_nov_total = sum(t["amount"] for t in nov_txs if t["category"] == "01. Uber e 99 (Corridas no Cartão)" and t["holder"] == "AUGUSTO")
-    uj_nov_total = sum(t["amount"] for t in nov_txs if t["category"] == "01. Uber e 99 (Corridas no Cartão)" and t["holder"] == "JESSICA")
+    ug_nov_total = sum(t["amount"] for t in nov_txs if t["category"] == "Uber / 99 Guto")
+    uj_nov_total = sum(t["amount"] for t in nov_txs if t["category"] == "Uber / 99 Jé")
 
-    # Compras Online em Novembro
+    # Compras Online & Jogos em Novembro
     co_nov_total = sum(t["amount"] for t in nov_txs if t["category"] in (
-        "04. Jogos, Games & Parques (Nintendo/Steam/etc.)",
-        "18. Compras Online (Amazon/ML/Shopee), Papelaria e Brinquedos"
+        "Jogos (Nintendo / Steam / Console)",
+        "Compras Online e Diversos"
     ))
 
     semaforos_atuais = {
@@ -785,18 +960,21 @@ def executar_extracao():
             "itens": itens_mes
         })
 
-    # 8. AUDITORIA DE ASSINATURAS
+    # 8. AUDITORIA DE ASSINATURAS (ORDENAÇÃO CRONOLÓGICA PARA PEGAR ÚLTIMO VALOR REAL - EX: KOTAS R$ 8,70)
+    def sort_key_sub(t):
+        d = t.get("date", "")
+        if "/" in d and len(d) >= 5:
+            return (t["bill_ym"], d[3:5], d[:2])
+        return (t["bill_ym"], d)
+
     assinaturas_resultado = []
     for sub in regras.ASSINATURAS_CONHECIDAS:
         matches = []
         for t in all_card_txs:
             d = t["desc"].upper()
-            if sub["nome"] == "iFood Club (Jéssica)" and t["source"] == "Nubank_Card":
-                continue
-            if sub["nome"] == "iFood Club (Augusto)" and t["source"] != "Nubank_Card":
-                continue
             if any(k in d for k in sub["kws"]):
                 matches.append(t)
+        matches.sort(key=sort_key_sub)
         tot_pago = sum(m["amount"] for m in matches)
         meses_ativos = sorted(set(m["bill_ym"] for m in matches))
         last_tx = matches[-1] if matches else None
@@ -809,16 +987,18 @@ def executar_extracao():
             "ultimo_mes": last_tx["bill_ym"] if last_tx else None,
             "cartao": last_tx["source"] if last_tx else None
         })
+    assinaturas_resultado.sort(key=lambda x: x["nome"].lower())
 
     # 9. CONSOLIDAÇÃO FINAL
     consolidado = {
         "metadata": {
             "gerado_em": datetime.now().isoformat(),
-            "versao": "2.0",
+            "versao": "3.0",
             "total_arquivos_processados": len(files),
             "meses_analisados": "2026-01 a 2026-11",
             "total_transacoes_auditadas": len(todas_transacoes),
-            "total_categorias": len(todas_categorias)
+            "total_categorias": len(todas_categorias),
+            "secoes_canonicas": SECOES_CANONICAS
         },
         "regras_e_tetos": {
             "teto_va_mensal": regras.TETO_VA_MENSAL,
@@ -833,6 +1013,7 @@ def executar_extracao():
         },
         "semaforos_atuais": semaforos_atuais,
         "resumo_mensal": resumo_mensal,
+        "secoes_resumo": secoes_resumo,
         "categorias_resumo": categorias_resumo,
         "parcelas_futuras": parcelas_futuras,
         "assinaturas": assinaturas_resultado,

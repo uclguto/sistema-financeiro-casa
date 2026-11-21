@@ -394,25 +394,16 @@
           <!-- Renderizado via app.js -->
         </div>
 
-        <!-- Checklist Interativo de Cortes de Assinaturas -->
-        <h3 class="section-title mt-4">✂️ Checklist de Cortes Imediatos</h3>
-        <p class="section-subtitle">Marque os cortes já realizados no celular (salvo localmente):</p>
+        <!-- Lista de Assinaturas Ativas & Lembretes Operacionais (Sem avisos de Aquarius/iFood) -->
+        <h3 class="section-title mt-4">📺 Assinaturas Ativas da Casa</h3>
+        <p class="section-subtitle">Valores mensais reais auditados nos cartões (ordem alfabética):</p>
 
+        <div class="card" id="assinaturas-ativas-container">
+          <!-- Renderizado dinamicamente via app.js -->
+        </div>
+
+        <h3 class="section-title mt-4">⚙️ Lembretes Operacionais dos Cartões</h3>
         <div class="card checklist-card" id="checklist-container">
-          <label class="check-item">
-            <input type="checkbox" id="cut-ifood" class="chk-cut" data-save="14.95">
-            <div class="check-label">
-              <strong>Cancelar 2º iFood Club da Jé</strong>
-              <span>Economia de R$ 14,95/mês (manter apenas o do Guto)</span>
-            </div>
-          </label>
-          <label class="check-item">
-            <input type="checkbox" id="cut-aquarius" class="chk-cut" data-save="39.90">
-            <div class="check-label">
-              <strong>Cancelar Streaming Aquarius</strong>
-              <span>Economia de R$ 39,90/mês (sem uso ativo)</span>
-            </div>
-          </label>
           <label class="check-item">
             <input type="checkbox" id="cut-debito-nu" class="chk-cut" data-save="0.0">
             <div class="check-label">
@@ -427,9 +418,6 @@
               <span>Mudar do Banrisul para débito ou Nubank</span>
             </div>
           </label>
-          <div class="savings-counter">
-            Economia mensal acumulada com os cortes: <strong id="total-savings">R$ 0,00/mês</strong>
-          </div>
         </div>
 
       </section>
@@ -441,10 +429,10 @@
         <div class="raiox-header-row">
           <div>
             <h3 class="section-title">📊 Gastos Mensais &amp; Raio-X Detalhado</h3>
-            <p class="section-subtitle">28 categorias completas e drill-down de todas as compras de 2026:</p>
+            <p class="section-subtitle">8 Seções da Planilha em ordem alfabética com drill-down clicável:</p>
           </div>
           <div class="view-toggle">
-            <button class="btn-toggle active" id="btn-view-ranking">Categorias &amp; Drill-Down</button>
+            <button class="btn-toggle active" id="btn-view-ranking">Seções &amp; Categorias</button>
             <button class="btn-toggle" id="btn-view-matriz">Matriz Panorâmica</button>
           </div>
         </div>
@@ -455,8 +443,8 @@
             <div class="filter-group">
               <label for="filter-month" class="filter-label">Mês de Referência:</label>
               <select id="filter-month" class="form-input">
-                <option value="TODOS">Ano Inteiro (Jan a Nov/2026)</option>
-                <option value="2026-11" selected>Novembro / 2026 (Atual)</option>
+                <option value="TODOS" selected>Ano Inteiro (Jan a Nov/2026)</option>
+                <option value="2026-11">Novembro / 2026 (Atual)</option>
                 <option value="2026-10">Outubro / 2026</option>
                 <option value="2026-09">Setembro / 2026</option>
                 <option value="2026-08">Agosto / 2026</option>
@@ -478,17 +466,18 @@
               </select>
             </div>
             <div class="filter-group">
-              <label for="filter-source" class="filter-label">Meio de Pagamento:</label>
+              <label for="filter-source" class="filter-label">Meio / Ordenação:</label>
               <select id="filter-source" class="form-input">
-                <option value="TODOS">Todos os Meios</option>
-                <option value="CARTAO">Cartões de Crédito</option>
-                <option value="CONTA_CORRENTE">Conta / Boletos / Pix</option>
-                <option value="VALE_ALIMENTACAO">Vale-Alimentação</option>
+                <option value="TODOS">Todos os Meios (Ordem A-Z)</option>
+                <option value="CARTAO">Só Cartões de Crédito</option>
+                <option value="CONTA_CORRENTE">Só Conta / Boletos / Pix</option>
+                <option value="VALE_ALIMENTACAO">Só Vale-Alimentação</option>
+                <option value="FOLHA">Só Descontos em Folha</option>
               </select>
             </div>
           </div>
           <div class="search-row mt-2">
-            <input type="text" id="filter-search" class="form-input" placeholder="🔍 Buscar por loja, item ou valor (ex: Zaffari, Panvel, Uber, Baru, 150...)">
+            <input type="text" id="filter-search" class="form-input" placeholder="🔍 Buscar por loja, jogo, item ou valor (ex: Nintendo, Zaffari, Kotas...)">
           </div>
         </div>
 
@@ -498,16 +487,32 @@
           <span>Transações auditadas: <strong id="stats-count">0</strong></span>
         </div>
 
-        <!-- Visualização 1: Ranking por Categorias com Drill-Down Clicável -->
+        <!-- Visualização 1: 8 Seções e Categorias (Ordem Alfabética) com Drill-Down -->
         <div id="view-ranking-container" class="ranking-view mt-3">
           <!-- Renderizado via app.js -->
         </div>
 
-        <!-- Visualização 2: Matriz Panorâmica Mês a Mês -->
+        <!-- Visualização 2: Matriz Panorâmica Mês a Mês (Clicável) -->
         <div id="view-matriz-container" class="matriz-view hidden mt-3">
           <!-- Renderizado via app.js -->
         </div>
       </section>
+
+      <!-- MODAL DE DRILL-DOWN PARA A MATRIZ PANORÂMICA -->
+      <div id="drilldown-modal" class="modal-overlay hidden">
+        <div class="drilldown-card">
+          <div class="drilldown-head">
+            <div>
+              <h3 id="drilldown-title">Detalhes da Categoria</h3>
+              <span class="text-sm text-muted" id="drilldown-subtitle"></span>
+            </div>
+            <button id="btn-close-drilldown" class="icon-btn">✕</button>
+          </div>
+          <div id="drilldown-body" class="drilldown-body">
+            <!-- Lista responsiva de transações -->
+          </div>
+        </div>
+      </div>
 
     </main>
 

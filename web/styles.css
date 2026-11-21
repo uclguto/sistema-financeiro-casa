@@ -1199,41 +1199,91 @@ body {
   background: var(--primary);
 }
 
-/* Corpo do Acordeão (Tabela de Transações) */
+/* Corpo do Acordeão (Lista Responsiva de Transações — 100% Adaptada ao Celular) */
 .cat-acc-body {
   display: none;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.22);
   border-top: 1px solid var(--border-card);
-  padding: 10px 14px;
-  overflow-x: auto;
+  padding: 8px 12px;
 }
 
 .cat-accordion.open .cat-acc-body {
   display: block;
 }
 
-.tx-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  min-width: 540px;
+.sec-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, rgba(47, 85, 151, 0.35), rgba(30, 41, 59, 0.6));
+  border-left: 4px solid var(--primary);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  margin-top: 16px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
 }
 
-.tx-table th {
-  text-align: left;
-  padding: 6px 8px;
+.sec-group-header:first-child {
+  margin-top: 4px;
+}
+
+.sec-group-total {
+  color: var(--primary);
+  font-size: 14px;
+}
+
+.tx-list-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tx-row-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tx-row-item:last-child {
+  border-bottom: none;
+}
+
+.tx-row-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tx-row-desc {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  word-break: break-word;
+}
+
+.tx-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
   font-size: 11px;
   color: var(--text-muted);
-  border-bottom: 1px solid var(--border-card);
 }
 
-.tx-table td {
-  padding: 7px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.tx-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+.tx-row-right {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .badge-tag {
@@ -1264,13 +1314,14 @@ body {
   color: var(--warning);
 }
 
-/* Visualização 2: Matriz Panorâmica */
+/* Visualização 2: Matriz Panorâmica (SEM fresta à esquerda & Coluna Sticky Compacta no Celular) */
 .matriz-view {
   background: var(--bg-card);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-md);
-  padding: 14px;
+  padding: 0;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .matriz-view.hidden {
@@ -1286,7 +1337,7 @@ body {
 
 .matriz-table th,
 .matriz-table td {
-  padding: 8px 12px;
+  padding: 9px 10px;
   text-align: right;
   border-bottom: 1px solid var(--border-card);
 }
@@ -1296,10 +1347,46 @@ body {
   text-align: left;
   position: sticky;
   left: 0;
-  background: var(--bg-card);
-  z-index: 2;
+  background-color: var(--bg-card);
+  z-index: 3;
   font-weight: 700;
+  padding-left: 12px;
   border-right: 1px solid var(--border-card);
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.35);
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.25;
+  max-width: 145px;
+  min-width: 125px;
+}
+
+@media (min-width: 768px) {
+  .matriz-table th:first-child,
+  .matriz-table td:first-child {
+    max-width: 280px;
+    min-width: 220px;
+  }
+}
+
+.matriz-table tr.matriz-sec-row td {
+  background: rgba(47, 85, 151, 0.25);
+  font-weight: 800;
+  color: var(--primary);
+  font-size: 11px;
+  letter-spacing: 0.4px;
+}
+
+.matriz-table tr.matriz-sec-row td:first-child {
+  background: #1B2B48;
+}
+
+.matriz-table tr.matriz-sub-row td {
+  background: rgba(255, 255, 255, 0.03);
+  font-weight: 700;
+}
+
+.matriz-table tr.matriz-sub-row td:first-child {
+  background: #182338;
 }
 
 .matriz-table th {
@@ -1307,19 +1394,60 @@ body {
   font-size: 11px;
 }
 
-.matriz-table tr:hover td {
-  background: var(--bg-card-hover);
+.matriz-cell-clickable {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.matriz-cell-clickable:hover {
+  background: var(--bg-card-hover) !important;
+  color: var(--primary);
+  text-decoration: underline;
 }
 
 .matriz-table td.col-total {
   font-weight: 800;
   color: var(--primary);
-  background: rgba(56, 189, 248, 0.05);
+  background: rgba(56, 189, 248, 0.06);
 }
 
 .matriz-table td.col-media {
   font-weight: 700;
   color: var(--success);
+}
+
+/* Modal de Drill-Down da Matriz Panorâmica */
+.drilldown-card {
+  width: 100%;
+  max-width: 680px;
+  max-height: 85vh;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+}
+
+.drilldown-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-card);
+  background: var(--bg-card-hover);
+}
+
+.drilldown-head h3 {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.drilldown-body {
+  padding: 12px 16px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 /* ==========================================================================

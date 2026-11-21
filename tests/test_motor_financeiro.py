@@ -43,6 +43,12 @@ def test_extrator_unificado_execucao_e_integridade():
     # Valida 28+ categorias e volume real auditado de transações
     assert len(consolidado["categorias_resumo"]) >= 25
     assert len(consolidado["todas_transacoes"]) >= 2000
+    assert len(consolidado["secoes_resumo"]) == 8
+
+    # Valida correção cronológica do Asaas Kotas (R$ 8,70)
+    kotas = next((a for a in consolidado["assinaturas"] if "Kotas" in a["nome"]), None)
+    assert kotas is not None
+    assert round(kotas["ultimo_valor"], 2) == 8.70
 
     # Valida semáforos reais
     sem = consolidado["semaforos_atuais"]
@@ -104,22 +110,22 @@ def test_payload_enc_zero_leakage():
 
 
 def test_geracao_planilha_google_sheets_xlsx():
-    """Valida a geração da planilha XLSX com as abas estruturadas e preservação das originais."""
+    """Valida a geração da planilha XLSX no formato original com Total Anual e 12 abas mensais."""
     sync_google_sheets.sincronizar_planilha()
     xlsx_path = sync_google_sheets.OUTPUT_XLSX
     assert os.path.exists(xlsx_path)
 
     wb = openpyxl.load_workbook(xlsx_path, data_only=False)
     sheet_names = wb.sheetnames
+    assert "Total Anual" in sheet_names
+    for mes in ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]:
+        assert mes in sheet_names, f"Aba mensal ausente: {mes}"
     assert "Resumo & Metas 2026-2027" in sheet_names
-    assert "Gastos Mensais por Categoria" in sheet_names
-    assert "Parcelas Futuras & Assinaturas" in sheet_names
-    assert "Lançamentos Auditados 2026" in sheet_names
     # Abas originais preservadas
     assert any("Orig -" in name for name in sheet_names)
 
-    ws_resumo = wb["Resumo & Metas 2026-2027"]
-    assert ws_resumo["A1"].value == "CONTROLE FINANCEIRO DOMÉSTICO — GUTO & JÉ"
+    ws_anual = wb["Total Anual"]
+    assert "8 SEÇÕES" in str(ws_anual["A1"].value)
 
 
 def test_pwa_arquivos_estaticos_presentes():
