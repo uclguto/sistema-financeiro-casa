@@ -1,8 +1,8 @@
 r"""
 Sincronizador Automático da Planilha Google Sheets e Gerador XLSX
-Gera a planilha limpa com 4 abas estruturadas (sem erros de fórmula) em
+Gera a planilha limpa com as 28 categorias, lançamentos completos e abas originais em:
 C:\Dropbox\Controle_Financeiro\Planilha_Controle_Financeiro_2026_2027.xlsx
-e sincroniza com a nuvem (Google Sheets) via Apps Script Webhook ou API.
+e atualiza diretamente a planilha na nuvem (Google Drive API v3).
 """
 
 import os
@@ -19,8 +19,9 @@ import config_regras as regras
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONSOLIDADO_PATH = os.path.join(BASE_DIR, "data", "consolidado_2026_2027.json")
 OUTPUT_XLSX = os.path.join(os.path.dirname(BASE_DIR), "Planilha_Controle_Financeiro_2026_2027.xlsx")
+ORIGINAL_XLSX = os.path.join(os.path.dirname(BASE_DIR), "Planilha_Controle_Financeiro_Original.xlsx")
+GCP_CREDS_PATH = r"C:\Dropbox\Análise\caderno_analise_scripts\projeto_caderno_automatizado\gcp_credentials.json"
 
-# Estilos Visuais Elegantes (Paleta Moderna Azul Marinho / Cinza / Verde)
 FONT_TITLE = Font(name="Calibri", size=14, bold=True, color="1F4E79")
 FONT_SECTION = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
 FONT_HEADER = Font(name="Calibri", size=10, bold=True, color="1F4E79")
@@ -43,7 +44,6 @@ BORDER_CELL = Border(left=THIN_SIDE, right=THIN_SIDE, top=THIN_SIDE, bottom=THIN
 
 
 def auto_fit_columns(ws, min_width=12, max_width=45):
-    """Ajusta automaticamente a largura das colunas."""
     for col in ws.columns:
         col_letter = get_column_letter(col[0].column)
         max_len = 0
@@ -66,10 +66,10 @@ def criar_aba_resumo(wb, data):
 
     ws["A1"] = "CONTROLE FINANCEIRO DOMÉSTICO — GUTO & JÉ"
     ws["A1"].font = FONT_TITLE
-    ws["A2"] = f"Metas, Semáforos e Balanço Integrado (Atualizado em {data['metadata']['gerado_em'][:10]})"
+    ws["A2"] = f"Metas, Semáforos e Balanço Auditado (Atualizado em {data['metadata']['gerado_em'][:10]})"
     ws["A2"].font = FONT_MUTED
 
-    # 1. TETOS E METAS DE CONTROLE ATIVO
+    # 1. TETOS
     ws.merge_cells("A4:D4")
     ws["A4"] = "1. TETOS MENSAIS E SEMANAIS DE CONTROLE ATIVO (SEMÁFOROS)"
     ws["A4"].font = FONT_SECTION
@@ -105,22 +105,20 @@ def criar_aba_resumo(wb, data):
         if isinstance(t[2], (int, float)): formatar_moeda(c3)
         c2.alignment = ALIGN_RIGHT
         c3.alignment = ALIGN_RIGHT
-        c4.alignment = ALIGN_LEFT
 
-    # 2. STATUS DOS 4 POTES DE RESERVA
+    # 2. STATUS DOS 4 POTES
     start_r = 15
     ws.merge_cells(f"A{start_r}:D{start_r}")
     ws[f"A{start_r}"] = "2. STATUS DOS 4 POTES DE RESERVA E COFRINHOS"
     ws[f"A{start_r}"].font = FONT_SECTION
     ws[f"A{start_r}"].fill = FILL_SECTION
 
-    h2 = ["Pote de Reserva", "Saldo Atual Auditado", "Objetivo / Função", "Regra de Aporte"]
+    h2 = ["Pote de Reserva", "Saldo Atual Auditado", "Função / Destinação", "Regra de Aporte"]
     for col_idx, h in enumerate(h2, 1):
         c = ws.cell(row=start_r + 1, column=col_idx, value=h)
         c.font = FONT_HEADER
         c.fill = FILL_HEADER
         c.border = BORDER_CELL
-        c.alignment = ALIGN_CENTER if col_idx == 2 else ALIGN_LEFT
 
     potes = [
         ("👶 Poupança Clara (Mercado Pago)", 2515.00, "Patrimônio futuro da Clara (reposto com a PLR)", "Intocável; rendimento automático"),
@@ -140,14 +138,14 @@ def criar_aba_resumo(wb, data):
         formatar_moeda(c2)
         c2.alignment = ALIGN_RIGHT
 
-    # 3. BALANÇO REAL DE 2026: REPASSES JÉSSICA VS. CARTÕES ADICIONAIS
+    # 3. BALANÇO REAL DE REPASSES DA JÉSSICA VS. COFRINHOS VS. CARTÕES
     start_r3 = 22
-    ws.merge_cells(f"A{start_r3}:E{start_r3}")
-    ws[f"A{start_r3}"] = "3. BALANÇO REAL DE REPASSES DA JÉSSICA VS. CARTÕES ADICIONAIS (JAN A NOV/2026)"
+    ws.merge_cells(f"A{start_r3}:F{start_r3}")
+    ws[f"A{start_r3}"] = "3. BALANÇO REAL: REPASSES DA CLÍNICA DA JÉSSICA VS. RESGATES COFRINHOS VS. CARTÕES"
     ws[f"A{start_r3}"].font = FONT_SECTION
     ws[f"A{start_r3}"].fill = FILL_SECTION
 
-    h3 = ["Mês", "Repasses Líquidos Jéssica", "Fatura Cartões Jéssica", "Saldo Líquido Jé", "Observação Diagnóstica"]
+    h3 = ["Mês", "Repasse Real Clínica Jé", "Resgates Cofrinhos MP", "Fatura Cartões Jé", "Saldo Líquido Jé", "Diagnóstico"]
     for col_idx, h in enumerate(h3, 1):
         c = ws.cell(row=start_r3 + 1, column=col_idx, value=h)
         c.font = FONT_HEADER
@@ -157,54 +155,60 @@ def criar_aba_resumo(wb, data):
 
     for idx, rm in enumerate(data["resumo_mensal"], start_r3 + 2):
         c1 = ws.cell(row=idx, column=1, value=rm["mes"])
-        c2 = ws.cell(row=idx, column=2, value=rm["jessica_repasses_liquido"])
-        c3 = ws.cell(row=idx, column=3, value=rm["cartao_jessica"])
-        c4 = ws.cell(row=idx, column=4, value=f"=B{idx}-C{idx}")
-        obs = "Equilibrado" if rm["jessica_repasses_liquido"] >= rm["cartao_jessica"] else "Fatura superou repasses"
-        c5 = ws.cell(row=idx, column=5, value=obs)
-        for c in [c1, c2, c3, c4, c5]:
+        c2 = ws.cell(row=idx, column=2, value=rm["jessica_repasses_clinica"])
+        c3 = ws.cell(row=idx, column=3, value=rm["cofrinhos_resgates"])
+        c4 = ws.cell(row=idx, column=4, value=rm["cartao_jessica"])
+        c5 = ws.cell(row=idx, column=5, value=f"=B{idx}-D{idx}")
+        obs = "Equilibrado" if rm["jessica_repasses_clinica"] >= rm["cartao_jessica"] else "Fatura superou repasses"
+        c6 = ws.cell(row=idx, column=6, value=obs)
+
+        for c in [c1, c2, c3, c4, c5, c6]:
             c.font = FONT_NORMAL
             c.border = BORDER_CELL
         c1.alignment = ALIGN_CENTER
         c2.alignment = ALIGN_RIGHT
         c3.alignment = ALIGN_RIGHT
         c4.alignment = ALIGN_RIGHT
+        c5.alignment = ALIGN_RIGHT
         formatar_moeda(c2)
         formatar_moeda(c3)
         formatar_moeda(c4)
+        formatar_moeda(c5)
         if obs == "Equilibrado":
-            c4.fill = FILL_SUCCESS
+            c5.fill = FILL_SUCCESS
         else:
-            c4.fill = FILL_ALERT
+            c5.fill = FILL_ALERT
 
     # Linha Total
     tot_r = start_r3 + 2 + len(data["resumo_mensal"])
     ws.cell(row=tot_r, column=1, value="TOTAL 2026").font = FONT_BOLD
     c_tot_rep = ws.cell(row=tot_r, column=2, value=f"=SUM(B{start_r3+2}:B{tot_r-1})")
-    c_tot_cart = ws.cell(row=tot_r, column=3, value=f"=SUM(C{start_r3+2}:C{tot_r-1})")
-    c_tot_dif = ws.cell(row=tot_r, column=4, value=f"=B{tot_r}-C{tot_r}")
-    ws.cell(row=tot_r, column=5, value="Déficit coberto por reservas").font = FONT_BOLD
-    for c in [ws.cell(row=tot_r, column=1), c_tot_rep, c_tot_cart, c_tot_dif, ws.cell(row=tot_r, column=5)]:
+    c_tot_resg = ws.cell(row=tot_r, column=3, value=f"=SUM(C{start_r3+2}:C{tot_r-1})")
+    c_tot_cart = ws.cell(row=tot_r, column=4, value=f"=SUM(D{start_r3+2}:D{tot_r-1})")
+    c_tot_dif = ws.cell(row=tot_r, column=5, value=f"=B{tot_r}-D{tot_r}")
+    ws.cell(row=tot_r, column=6, value="Déficit coberto por reservas").font = FONT_BOLD
+    for c in [ws.cell(row=tot_r, column=1), c_tot_rep, c_tot_resg, c_tot_cart, c_tot_dif, ws.cell(row=tot_r, column=6)]:
         c.font = FONT_BOLD
         c.border = BORDER_CELL
         c.fill = FILL_HEADER
     formatar_moeda(c_tot_rep)
+    formatar_moeda(c_tot_resg)
     formatar_moeda(c_tot_cart)
     formatar_moeda(c_tot_dif)
 
     auto_fit_columns(ws)
 
 
-def criar_aba_anual_blocos(wb, data):
-    """Aba 2: Anual por Blocos 2026 (Visão Canônica dos Gastos Familiares)"""
-    ws = wb.create_sheet(title="Anual por Blocos 2026")
+def criar_aba_categorias_mensais(wb, data):
+    """Aba 2: Gastos Mensais por Categoria (As 28 categorias completas de Jan a Nov/2026)"""
+    ws = wb.create_sheet(title="Gastos Mensais por Categoria")
     ws.views.sheetView[0].showGridLines = True
 
-    ws["A1"] = "RAIO-X ANUAL POR BLOCOS ORÇAMENTÁRIOS — 2026"
+    ws["A1"] = "MATRIZ COMPLETA DE GASTOS POR CATEGORIA — 2026 (JAN A NOV)"
     ws["A1"].font = FONT_TITLE
 
     meses = [rm["mes"][5:] for rm in data["resumo_mensal"]]
-    headers = ["Bloco / Linha de Custo"] + meses + ["Total Ano", "Média/Mês"]
+    headers = ["Categoria de Gasto"] + meses + ["Total Ano", "Média/Mês", "Guto", "Jéssica"]
     for col_idx, h in enumerate(headers, 1):
         c = ws.cell(row=3, column=col_idx, value=h)
         c.font = FONT_HEADER
@@ -212,55 +216,54 @@ def criar_aba_anual_blocos(wb, data):
         c.border = BORDER_CELL
         c.alignment = ALIGN_CENTER if col_idx > 1 else ALIGN_LEFT
 
-    # Linhas de dados
-    linhas_blocos = [
-        ("RENDAS: Salário Líquido Guto (Banrisul)", [rm["salario_liquido"] for rm in data["resumo_mensal"]]),
-        ("RENDAS: Férias / PLR / Restituição IRPF", [rm["ferias_plr_irpf"] for rm in data["resumo_mensal"]]),
-        ("RENDAS: Repasses Líquidos Jéssica", [rm["jessica_repasses_liquido"] for rm in data["resumo_mensal"]]),
-        ("CARTÕES: Fatura Augusto (4110 + 2762 + Nubank)", [rm["cartao_augusto"] for rm in data["resumo_mensal"]]),
-        ("CARTÕES: Fatura Jéssica (4219 + 9994 + 1229)", [rm["cartao_jessica"] for rm in data["resumo_mensal"]]),
-        ("CLARA: Colégio Bom Conselho (Mensalidade)", [rm["colegio_clara"] for rm in data["resumo_mensal"]]),
-        ("CASA: Boletos Fixos Dia 10 (Condomínio / Aluguel)", [rm["boletos_casa"] for rm in data["resumo_mensal"]]),
-        ("CASA: CEEE Equatorial (Energia Elétrica)", [rm["ceee_luz"] for rm in data["resumo_mensal"]]),
-        ("CASA: Claro / NET (Internet & TV)", [rm["claro_net"] for rm in data["resumo_mensal"]]),
-        ("PESSOAL: Pix Mensal Thiago Dallo", [rm["pix_thiago"] for rm in data["resumo_mensal"]]),
-        ("PESSOAL: Pix Mensal Luiz Antonio", [rm["pix_luiz"] for rm in data["resumo_mensal"]]),
-        ("VALE-ALIMENTAÇÃO: Crédito Recebido", [rm["va_credito"] for rm in data["resumo_mensal"]]),
-        ("VALE-ALIMENTAÇÃO: Gastos Zaffari", [rm["va_gasto_zaffari"] for rm in data["resumo_mensal"]]),
-        ("VALE-ALIMENTAÇÃO: Gastos Feira de Sábado", [rm["va_gasto_feira"] for rm in data["resumo_mensal"]]),
-        ("VALE-ALIMENTAÇÃO: Gastos Farmácia/Restaurante", [rm["va_gasto_outros"] for rm in data["resumo_mensal"]]),
-    ]
-
-    for r_idx, (nome_linha, valores) in enumerate(linhas_blocos, 4):
-        c_nome = ws.cell(row=r_idx, column=1, value=nome_linha)
+    # Categorias
+    cats = data.get("categorias_resumo", [])
+    for r_idx, cat in enumerate(cats, 4):
+        c_nome = ws.cell(row=r_idx, column=1, value=cat["categoria"])
         c_nome.font = FONT_NORMAL
         c_nome.border = BORDER_CELL
-        if "RENDAS" in nome_linha:
-            c_nome.font = FONT_BOLD
-            c_nome.fill = FILL_SUCCESS
-        elif "CARTÕES" in nome_linha:
-            c_nome.fill = FILL_ALERT
 
-        for m_idx, val in enumerate(valores, 2):
+        for m_idx, ym in enumerate([rm["mes"] for rm in data["resumo_mensal"]], 2):
+            val = cat["por_mes"].get(ym, 0.0)
             c_val = ws.cell(row=r_idx, column=m_idx, value=val)
             c_val.font = FONT_NORMAL
             c_val.border = BORDER_CELL
             c_val.alignment = ALIGN_RIGHT
             formatar_moeda(c_val)
 
-        # Fórmulas de Total e Média
-        start_col_letter = get_column_letter(2)
-        end_col_letter = get_column_letter(len(valores) + 1)
-        tot_col = len(valores) + 2
-        med_col = len(valores) + 3
+        # Total e Média
+        start_col = get_column_letter(2)
+        end_col = get_column_letter(len(meses) + 1)
+        tot_col = len(meses) + 2
+        med_col = len(meses) + 3
+        guto_col = len(meses) + 4
+        je_col = len(meses) + 5
 
-        c_tot = ws.cell(row=r_idx, column=tot_col, value=f"=SUM({start_col_letter}{r_idx}:{end_col_letter}{r_idx})")
-        c_med = ws.cell(row=r_idx, column=med_col, value=f"=AVERAGE({start_col_letter}{r_idx}:{end_col_letter}{r_idx})")
-        for c in [c_tot, c_med]:
-            c.font = FONT_BOLD
+        c_tot = ws.cell(row=r_idx, column=tot_col, value=f"=SUM({start_col}{r_idx}:{end_col}{r_idx})")
+        c_med = ws.cell(row=r_idx, column=med_col, value=f"=AVERAGE({start_col}{r_idx}:{end_col}{r_idx})")
+        c_guto = ws.cell(row=r_idx, column=guto_col, value=cat["total_guto"])
+        c_je = ws.cell(row=r_idx, column=je_col, value=cat["total_je"])
+
+        for c in [c_tot, c_med, c_guto, c_je]:
+            c.font = FONT_BOLD if c in [c_tot, c_med] else FONT_NORMAL
             c.border = BORDER_CELL
             c.alignment = ALIGN_RIGHT
             formatar_moeda(c)
+
+    # Linha Total
+    tot_row = len(cats) + 4
+    ws.cell(row=tot_row, column=1, value="TOTAL GERAL").font = FONT_BOLD
+    ws.cell(row=tot_row, column=1).fill = FILL_SECTION
+    ws.cell(row=tot_row, column=1).font = FONT_SECTION
+
+    for col in range(2, len(headers) + 1):
+        col_let = get_column_letter(col)
+        c = ws.cell(row=tot_row, column=col, value=f"=SUM({col_let}4:{col_let}{tot_row-1})")
+        c.font = FONT_BOLD
+        c.border = BORDER_CELL
+        c.fill = FILL_HEADER
+        c.alignment = ALIGN_RIGHT
+        formatar_moeda(c)
 
     auto_fit_columns(ws)
 
@@ -273,9 +276,9 @@ def criar_aba_parcelas_assinaturas(wb, data):
     ws["A1"] = "PROJEÇÃO DE PARCELAS FUTURAS E AUDITORIA DE RECORRÊNCIAS"
     ws["A1"].font = FONT_TITLE
 
-    # 1. CRONOGRAMA DE PARCELAS
+    # 1. CRONOGRAMA
     ws.merge_cells("A3:E3")
-    ws["A3"] = "1. CRONOGRAMA DE QUEDA DAS PARCELAS DE CARTÃO (DEZ/2026 A OUT/2027)"
+    ws["A3"] = "1. CRONOGRAMA DE QUEDA DAS PARCELAS (DEZ/2026 A OUT/2027)"
     ws["A3"].font = FONT_SECTION
     ws["A3"].fill = FILL_SECTION
 
@@ -311,7 +314,7 @@ def criar_aba_parcelas_assinaturas(wb, data):
             c2.fill = FILL_SUCCESS
             c4.fill = FILL_SUCCESS
 
-    # 2. AUDITORIA DE ASSINATURAS
+    # 2. AUDITORIA ASSINATURAS
     start_r2 = 18
     ws.merge_cells(f"A{start_r2}:E{start_r2}")
     ws[f"A{start_r2}"] = "2. CHECKLIST E AUDITORIA DE ASSINATURAS E RECORRÊNCIAS"
@@ -350,14 +353,14 @@ def criar_aba_parcelas_assinaturas(wb, data):
 
 
 def criar_aba_lancamentos_auditados(wb, data):
-    """Aba 4: Lançamentos Auditados 2026 (Amostra e Transações Recentes)"""
+    """Aba 4: Lançamentos Auditados 2026 (Todas as transações completas com categoria)"""
     ws = wb.create_sheet(title="Lançamentos Auditados 2026")
     ws.views.sheetView[0].showGridLines = True
 
-    ws["A1"] = "TRANSAÇÕES RECENTES AUDITADAS (CARTÕES E CONTAS)"
+    ws["A1"] = "BASE COMPLETA DE TRANSAÇÕES AUDITADAS 2026 (JAN A NOV)"
     ws["A1"].font = FONT_TITLE
 
-    headers = ["Mês da Fatura", "Data", "Origem / Cartão", "Titular", "Descrição do Lançamento", "Valor (R$)", "Parcela"]
+    headers = ["Mês", "Data", "Origem", "Titular", "Categoria", "Descrição", "Valor (R$)", "Parcela", "Tipo"]
     for col_idx, h in enumerate(headers, 1):
         c = ws.cell(row=3, column=col_idx, value=h)
         c.font = FONT_HEADER
@@ -365,67 +368,112 @@ def criar_aba_lancamentos_auditados(wb, data):
         c.border = BORDER_CELL
         c.alignment = ALIGN_CENTER
 
-    txs = data.get("transacoes_recentes_novembro", [])
+    txs = data.get("todas_transacoes", [])
     for idx, t in enumerate(txs, 4):
-        c1 = ws.cell(row=idx, column=1, value=t.get("bill_ym", ""))
+        c1 = ws.cell(row=idx, column=1, value=t.get("ym", ""))
         c2 = ws.cell(row=idx, column=2, value=t.get("date", ""))
         c3 = ws.cell(row=idx, column=3, value=t.get("source", ""))
         c4 = ws.cell(row=idx, column=4, value=t.get("holder", ""))
-        c5 = ws.cell(row=idx, column=5, value=t.get("desc", ""))
-        c6 = ws.cell(row=idx, column=6, value=t.get("amount", 0.0))
+        c5 = ws.cell(row=idx, column=5, value=t.get("category", ""))
+        c6 = ws.cell(row=idx, column=6, value=t.get("desc", ""))
+        c7 = ws.cell(row=idx, column=7, value=t.get("amount", 0.0))
         parc = f"{t.get('inst_cur')}/{t.get('inst_tot')}" if t.get("inst_cur") else "-"
-        c7 = ws.cell(row=idx, column=7, value=parc)
+        c8 = ws.cell(row=idx, column=8, value=parc)
+        c9 = ws.cell(row=idx, column=9, value=t.get("tipo", ""))
 
-        for c in [c1, c2, c3, c4, c5, c6, c7]:
+        for c in [c1, c2, c3, c4, c5, c6, c7, c8, c9]:
             c.font = FONT_NORMAL
             c.border = BORDER_CELL
         c1.alignment = ALIGN_CENTER
         c2.alignment = ALIGN_CENTER
         c3.alignment = ALIGN_CENTER
         c4.alignment = ALIGN_CENTER
-        c6.alignment = ALIGN_RIGHT
-        c7.alignment = ALIGN_CENTER
-        formatar_moeda(c6)
+        c7.alignment = ALIGN_RIGHT
+        c8.alignment = ALIGN_CENTER
+        c9.alignment = ALIGN_CENTER
+        formatar_moeda(c7)
 
     auto_fit_columns(ws)
 
 
+def copiar_abas_originais(wb):
+    """Preserva as 4 abas históricas originais digitadas pelo Guto."""
+    if not os.path.exists(ORIGINAL_XLSX):
+        return
+    try:
+        wb_orig = openpyxl.load_workbook(ORIGINAL_XLSX, data_only=True)
+        for sname in wb_orig.sheetnames:
+            ws_src = wb_orig[sname]
+            ws_dst = wb.create_sheet(title=f"Orig - {sname[:20]}")
+            ws_dst.views.sheetView[0].showGridLines = True
+            for row in ws_src.iter_rows(values_only=True):
+                ws_dst.append(list(row))
+        print("Abas originais históricas preservadas com sucesso no arquivo XLSX!")
+    except Exception as e:
+        print(f"Aviso ao copiar abas originais: {e}")
+
+
+def enviar_xlsx_para_google_drive(xlsx_path: str, sheet_id: str) -> bool:
+    """Atualiza a planilha online do Google Sheets diretamente via Google Drive API v3."""
+    if not os.path.exists(GCP_CREDS_PATH):
+        print(f"Aviso: Credencial Google Drive não localizada em {GCP_CREDS_PATH}")
+        return False
+
+    try:
+        from google.oauth2 import service_account
+        from google.auth.transport.requests import Request
+
+        creds = service_account.Credentials.from_service_account_file(
+            GCP_CREDS_PATH,
+            scopes=["https://www.googleapis.com/auth/drive"]
+        )
+        creds.refresh(Request())
+
+        with open(xlsx_path, "rb") as f:
+            xlsx_bytes = f.read()
+
+        url = f"https://www.googleapis.com/upload/drive/v3/files/{sheet_id}?uploadType=media&supportsAllDrives=true"
+        headers = {
+            "Authorization": f"Bearer {creds.token}",
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }
+        resp = requests.patch(url, headers=headers, data=xlsx_bytes, timeout=40)
+        if resp.status_code == 200:
+            info = resp.json()
+            print(f"✅ Planilha Google Drive atualizada na nuvem com sucesso! ID={info.get('id')} Nome='{info.get('name')}'")
+            return True
+        else:
+            print(f"❌ Erro ao atualizar Google Drive API v3 (status {resp.status_code}): {resp.text[:300]}")
+            return False
+    except Exception as e:
+        print(f"❌ Exceção ao conectar na Google Drive API v3: {e}")
+        return False
+
+
 def sincronizar_planilha():
-    """Gera a planilha XLSX local e envia para a nuvem caso webhook esteja configurado."""
+    """Gera a planilha XLSX local e envia para a nuvem Google Drive."""
     if not os.path.exists(CONSOLIDADO_PATH):
         raise FileNotFoundError(f"Consolidado não encontrado em {CONSOLIDADO_PATH}. Execute o extrator primeiro.")
 
     with open(CONSOLIDADO_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    print("Gerando arquivo XLSX com 4 abas estruturadas...")
+    print("Gerando arquivo XLSX com as 28 categorias e lançamentos completos...")
     wb = openpyxl.Workbook()
     criar_aba_resumo(wb, data)
-    criar_aba_anual_blocos(wb, data)
+    criar_aba_categorias_mensais(wb, data)
     criar_aba_parcelas_assinaturas(wb, data)
     criar_aba_lancamentos_auditados(wb, data)
+    copiar_abas_originais(wb)
 
     wb.save(OUTPUT_XLSX)
     print(f"Planilha XLSX gerada com sucesso: {OUTPUT_XLSX} ({os.path.getsize(OUTPUT_XLSX)} bytes)")
 
-    # Sincronização em nuvem via Webhook Google Apps Script se configurado
-    webhook_url = regras.GOOGLE_APPS_SCRIPT_WEBHOOK_URL
-    if webhook_url:
-        print(f"Enviando atualização para o Google Sheets via Webhook: {webhook_url[:40]}...")
-        try:
-            # Prepara estrutura tabular simplificada para o Apps Script
-            payload = {
-                "updated_at": data["metadata"]["gerado_em"],
-                "resumo_mensal": data["resumo_mensal"],
-                "parcelas_futuras": data["parcelas_futuras"],
-                "assinaturas": data["assinaturas"],
-            }
-            resp = requests.post(webhook_url, json=payload, timeout=20)
-            print(f"Resposta Webhook: status={resp.status_code} text={resp.text[:120]}")
-        except Exception as e:
-            print(f"Aviso: Não foi possível enviar webhook para o Google Sheets ({e})")
-    else:
-        print("Webhook do Google Apps Script não configurado em .env (consulte docs/COMO_CONECTAR_PLANILHA_AUTOMATICA.md)")
+    # Upload direto na nuvem Google Drive
+    sheet_id = regras.GOOGLE_SHEET_ID
+    if sheet_id:
+        print(f"Enviando para a planilha Google Drive ID={sheet_id}...")
+        enviar_xlsx_para_google_drive(OUTPUT_XLSX, sheet_id)
 
 
 if __name__ == "__main__":

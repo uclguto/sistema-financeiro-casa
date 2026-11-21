@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Casa G&J — Finanças</title>
+  <title>Casa G&J — Painel Financeiro</title>
   
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0F172A">
-  <meta name="description" content="Painel financeiro familiar mobile com criptografia de ponta a ponta.">
+  <meta name="description" content="Painel financeiro familiar com 28 categorias, criptografia AES-256-GCM e drill-down completo.">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
@@ -63,7 +63,7 @@
       </div>
 
       <div class="pin-footer-info">
-        Nenhum dado financeiro trafega descriptografado. Decodificação 100% em memória RAM via WebCrypto API.
+        Nenhum dado financeiro trafega descriptografado. Decodificação 100% em memória RAM via WebCrypto API nativa.
       </div>
     </div>
   </div>
@@ -74,16 +74,18 @@
   <div id="app-container" class="app-layout hidden">
     <!-- Top Header -->
     <header class="app-header">
-      <div class="header-branding">
-        <img src="icon.svg" alt="Logo" class="header-logo">
-        <div>
-          <h1 class="header-title">Casa G&amp;J</h1>
-          <span class="header-sync-info" id="sync-info">Sincronizado</span>
+      <div class="header-container">
+        <div class="header-branding">
+          <img src="icon.svg" alt="Logo" class="header-logo">
+          <div>
+            <h1 class="header-title">Casa G&amp;J</h1>
+            <span class="header-sync-info" id="sync-info">Sincronizado</span>
+          </div>
         </div>
-      </div>
-      <div class="header-actions">
-        <button id="btn-theme" class="icon-btn" title="Alternar tema">🌓</button>
-        <button id="btn-lock" class="icon-btn" title="Bloquear app">🔒</button>
+        <div class="header-actions">
+          <button id="btn-theme" class="icon-btn" title="Alternar tema">🌓</button>
+          <button id="btn-lock" class="icon-btn" title="Bloquear app">🔒</button>
+        </div>
       </div>
     </header>
 
@@ -103,14 +105,20 @@
           </div>
           <div class="card-hero-values">
             <div class="hero-val-block">
-              <span class="val-label">Cartões Guto (Teto R$ 3.500)</span>
+              <div class="val-header-row">
+                <span class="val-label">Cartões Guto (Teto R$ 3.500)</span>
+                <span class="val-status" id="hero-guto-status"></span>
+              </div>
               <span class="val-num" id="hero-guto-val">R$ 0,00</span>
               <div class="progress-bar-wrap">
                 <div class="progress-bar" id="hero-guto-bar"></div>
               </div>
             </div>
             <div class="hero-val-block mt-3">
-              <span class="val-label">Cartões Jéssica (Teto R$ 2.500)</span>
+              <div class="val-header-row">
+                <span class="val-label">Cartões Jéssica (Teto R$ 2.500)</span>
+                <span class="val-status" id="hero-je-status"></span>
+              </div>
               <span class="val-num" id="hero-je-val">R$ 0,00</span>
               <div class="progress-bar-wrap">
                 <div class="progress-bar" id="hero-je-bar"></div>
@@ -120,7 +128,7 @@
         </div>
 
         <!-- Semáforos Semanais -->
-        <h3 class="section-title">🚦 Semáforos de Controle Semanal</h3>
+        <h3 class="section-title">🚦 Semáforos de Controle Semanal &amp; Mensal</h3>
         <p class="section-subtitle">Onde estamos gastando e quanto ainda podemos gastar:</p>
 
         <div class="semaphore-grid">
@@ -130,7 +138,7 @@
               <div class="sem-icon">🛒</div>
               <div class="sem-info">
                 <span class="sem-name">Vale-Alimentação (Semana)</span>
-                <span class="sem-meta">Meta: R$ 630,00 / semana</span>
+                <span class="sem-meta">Meta: R$ 630,00 / semana (R$ 2.646/mês)</span>
               </div>
             </div>
             <div class="sem-gauge">
@@ -142,7 +150,7 @@
                 <span class="sem-avail" id="sem-va-avail">R$ 630,00 livres</span>
               </div>
             </div>
-            <span class="sem-hint">Exclusivo para Zaffari e Feira de Sábado</span>
+            <span class="sem-hint">Exclusivo para Supermercado Zaffari e Feira de Sábado</span>
           </div>
 
           <!-- Comer Fora & iFood -->
@@ -205,9 +213,70 @@
               </div>
             </div>
           </div>
+
+          <!-- Compras Online & Games -->
+          <div class="sem-card" id="sem-compras-online">
+            <div class="sem-top">
+              <div class="sem-icon">📦</div>
+              <div class="sem-info">
+                <span class="sem-name">Compras Online &amp; Jogos</span>
+                <span class="sem-meta">Teto: R$ 700,00 / mês</span>
+              </div>
+            </div>
+            <div class="sem-gauge">
+              <div class="gauge-bar-wrap">
+                <div class="gauge-bar" id="gauge-co-bar"></div>
+              </div>
+              <div class="sem-numbers">
+                <span id="sem-co-spent">R$ 0,00 gastos</span>
+                <span class="sem-avail" id="sem-co-avail">R$ 700,00 livres</span>
+              </div>
+            </div>
+            <span class="sem-hint">Amazon, Mercado Livre, Shopee, Papelaria e Jogos</span>
+          </div>
         </div>
 
-        <!-- Ferramenta Rápida: Calculadora Caixinha Jé (30%) & Anotação Rápida -->
+        <!-- Ferramenta Rápida: + Anotar Gasto Rápido da Semana -->
+        <div class="card mt-4">
+          <div class="card-head-simple">
+            <span class="card-badge">⚡ + Anotar Gasto Rápido da Semana</span>
+          </div>
+          <p class="text-sm text-muted">
+            Fez uma compra no cartão ou VA agora? Anote aqui para atualizar os semáforos no celular em tempo real:
+          </p>
+          <div class="quick-form-grid mt-3">
+            <div class="form-group">
+              <label class="form-label">Categoria do Semáforo:</label>
+              <select id="quick-category" class="form-input">
+                <option value="va">🛒 Vale-Alimentação (Zaffari / Feira)</option>
+                <option value="comer_fora">🍕 Comer Fora & Lazer (Baru / iFood)</option>
+                <option value="uber_guto">🚗 Uber / 99 Guto</option>
+                <option value="uber_je">🚗 Uber / 99 Jéssica</option>
+                <option value="compras_online">📦 Compras Online & Jogos</option>
+                <option value="outro">💳 Outros Cartão / Gerais</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Valor (R$):</label>
+              <div class="input-currency-wrap">
+                <span class="curr-symbol">R$</span>
+                <input type="number" id="quick-val" class="form-input" placeholder="50,00" step="0.50" min="0">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Descrição / Local:</label>
+              <input type="text" id="quick-desc" class="form-input" placeholder="Ex: Zaffari Total, Baru, Farmácia...">
+            </div>
+            <div class="form-group btn-col">
+              <button class="btn btn-primary" id="btn-quick-add">+ Salvar Gasto</button>
+            </div>
+          </div>
+          <div id="quick-entries-list" class="quick-entries-wrap mt-3">
+            <!-- Entradas adicionadas dinamicamente via app.js -->
+          </div>
+        </div>
+
+        <!-- Ferramenta Rápida: Calculadora Caixinha Jé (30%) -->
         <div class="card mt-4">
           <div class="card-head-simple">
             <span class="card-badge">👩‍⚕️ Caixinha Consultório Jé (30%)</span>
@@ -318,6 +387,13 @@
           </div>
         </div>
 
+        <!-- Lista de Compras Parceladas Ativas e Quando Acabam -->
+        <h3 class="section-title mt-4">📋 Compras Parceladas e Vencimentos</h3>
+        <p class="section-subtitle">Acompanhamento dos parcelamentos ativos no Banrisul e Nubank:</p>
+        <div class="card" id="parcelas-compras-container">
+          <!-- Renderizado via app.js -->
+        </div>
+
         <!-- Checklist Interativo de Cortes de Assinaturas -->
         <h3 class="section-title mt-4">✂️ Checklist de Cortes Imediatos</h3>
         <p class="section-subtitle">Marque os cortes já realizados no celular (salvo localmente):</p>
@@ -359,13 +435,76 @@
       </section>
 
       <!-- ================================================================= -->
-      <!-- TELA 4: RAIO-X 2026 (Visão Mensal dos Blocos Auditados)          -->
+      <!-- TELA 4: GASTOS MENSAIS & RAIO-X DETALHADO                         -->
       <!-- ================================================================= -->
       <section id="tab-raiox" class="tab-pane">
-        <h3 class="section-title">📊 Raio-X Financeiro 2026</h3>
-        <p class="section-subtitle">Consolidação auditada mês a mês (Janeiro a Novembro):</p>
+        <div class="raiox-header-row">
+          <div>
+            <h3 class="section-title">📊 Gastos Mensais &amp; Raio-X Detalhado</h3>
+            <p class="section-subtitle">28 categorias completas e drill-down de todas as compras de 2026:</p>
+          </div>
+          <div class="view-toggle">
+            <button class="btn-toggle active" id="btn-view-ranking">Categorias &amp; Drill-Down</button>
+            <button class="btn-toggle" id="btn-view-matriz">Matriz Panorâmica</button>
+          </div>
+        </div>
 
-        <div class="raiox-months-list" id="raiox-container">
+        <!-- Barra de Filtros e Busca -->
+        <div class="card filter-card">
+          <div class="filter-row">
+            <div class="filter-group">
+              <label for="filter-month" class="filter-label">Mês de Referência:</label>
+              <select id="filter-month" class="form-input">
+                <option value="TODOS">Ano Inteiro (Jan a Nov/2026)</option>
+                <option value="2026-11" selected>Novembro / 2026 (Atual)</option>
+                <option value="2026-10">Outubro / 2026</option>
+                <option value="2026-09">Setembro / 2026</option>
+                <option value="2026-08">Agosto / 2026</option>
+                <option value="2026-07">Julho / 2026</option>
+                <option value="2026-06">Junho / 2026</option>
+                <option value="2026-05">Maio / 2026</option>
+                <option value="2026-04">Abril / 2026</option>
+                <option value="2026-03">Março / 2026</option>
+                <option value="2026-02">Fevereiro / 2026</option>
+                <option value="2026-01">Janeiro / 2026</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="filter-holder" class="filter-label">Titular:</label>
+              <select id="filter-holder" class="form-input">
+                <option value="TODOS">Todos os Titulares</option>
+                <option value="AUGUSTO">Só Augusto (Guto)</option>
+                <option value="JESSICA">Só Jéssica</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="filter-source" class="filter-label">Meio de Pagamento:</label>
+              <select id="filter-source" class="form-input">
+                <option value="TODOS">Todos os Meios</option>
+                <option value="CARTAO">Cartões de Crédito</option>
+                <option value="CONTA_CORRENTE">Conta / Boletos / Pix</option>
+                <option value="VALE_ALIMENTACAO">Vale-Alimentação</option>
+              </select>
+            </div>
+          </div>
+          <div class="search-row mt-2">
+            <input type="text" id="filter-search" class="form-input" placeholder="🔍 Buscar por loja, item ou valor (ex: Zaffari, Panvel, Uber, Baru, 150...)">
+          </div>
+        </div>
+
+        <!-- Estatísticas do Filtro Ativo -->
+        <div class="filter-stats-bar" id="filter-stats-bar">
+          <span>Total filtrado: <strong id="stats-total">R$ 0,00</strong></span>
+          <span>Transações auditadas: <strong id="stats-count">0</strong></span>
+        </div>
+
+        <!-- Visualização 1: Ranking por Categorias com Drill-Down Clicável -->
+        <div id="view-ranking-container" class="ranking-view mt-3">
+          <!-- Renderizado via app.js -->
+        </div>
+
+        <!-- Visualização 2: Matriz Panorâmica Mês a Mês -->
+        <div id="view-matriz-container" class="matriz-view hidden mt-3">
           <!-- Renderizado via app.js -->
         </div>
       </section>
@@ -374,22 +513,24 @@
 
     <!-- Bottom Navigation Bar -->
     <nav class="app-nav">
-      <button class="nav-item active" data-tab="tab-agora">
-        <span class="nav-icon">🏠</span>
-        <span class="nav-label">Agora</span>
-      </button>
-      <button class="nav-item" data-tab="tab-je">
-        <span class="nav-icon">👩‍⚕️</span>
-        <span class="nav-label">Jé &amp; Casa</span>
-      </button>
-      <button class="nav-item" data-tab="tab-parcelas">
-        <span class="nav-icon">📉</span>
-        <span class="nav-label">Parcelas</span>
-      </button>
-      <button class="nav-item" data-tab="tab-raiox">
-        <span class="nav-icon">📊</span>
-        <span class="nav-label">Raio-X</span>
-      </button>
+      <div class="nav-container">
+        <button class="nav-item active" data-tab="tab-agora">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">Agora</span>
+        </button>
+        <button class="nav-item" data-tab="tab-je">
+          <span class="nav-icon">👩‍⚕️</span>
+          <span class="nav-label">Jé &amp; Casa</span>
+        </button>
+        <button class="nav-item" data-tab="tab-parcelas">
+          <span class="nav-icon">📉</span>
+          <span class="nav-label">Parcelas</span>
+        </button>
+        <button class="nav-item" data-tab="tab-raiox">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Gastos &amp; Raio-X</span>
+        </button>
+      </div>
     </nav>
   </div>
 
