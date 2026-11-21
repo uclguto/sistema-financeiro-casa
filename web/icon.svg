@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A8A"/>
+      <stop offset="50%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#090D16"/>
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Rounded Rect -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  
+  <!-- Outer Glow Circle -->
+  <circle cx="256" cy="256" r="190" fill="none" stroke="#38BDF8" stroke-width="4" opacity="0.3" stroke-dasharray="12 12"/>
+  
+  <!-- Stylized House Roof -->
+  <path d="M128 240 L256 128 L384 240 L352 240 L352 384 L160 384 L160 240 Z" fill="#1E293B" stroke="#38BDF8" stroke-width="8" stroke-linejoin="round"/>
+  
+  <!-- Central Shield -->
+  <path d="M256 180 C290 180 330 200 330 250 C330 310 256 350 256 350 C256 350 182 310 182 250 C182 200 222 180 256 180 Z" fill="url(#shieldGrad)"/>
+  
+  <!-- House Door / Heart -->
+  <path d="M256 220 C265 205 285 205 292 218 C298 230 292 242 256 265 C220 242 214 230 220 218 C227 205 247 205 256 220 Z" fill="#FFFFFF"/>
+  
+  <!-- Golden Coin Indicator -->
+  <circle cx="340" cy="180" r="32" fill="url(#goldGrad)" stroke="#FFFFFF" stroke-width="4"/>
+  <text x="340" y="192" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#FFFFFF" text-anchor="middle">$</text>
+</svg>

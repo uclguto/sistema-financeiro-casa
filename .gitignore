@@ -1,0 +1,18 @@
+# Nunca versionar extratos bancários brutos, vídeos, fotos, JSON em texto plano ou credenciais
+../extratos/
+extratos/
+data/consolidado_2026_2027.json
+*.pdf
+*.csv
+*.xlsx
+*.mp4
+*.jpg
+*.jpeg
+*.png
+.env
+gcp_credentials.json
+cookies.txt
+__pycache__/
+.pytest_cache/
+.venv/
+*.pyc

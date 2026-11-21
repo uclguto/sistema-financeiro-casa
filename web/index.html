@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Casa G&J — Finanças</title>
+  
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0F172A">
+  <meta name="description" content="Painel financeiro familiar mobile com criptografia de ponta a ponta.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+
+  <!-- ===================================================================== -->
+  <!-- MODAL DE DESBLOQUEIO POR PIN (CRIPTOGRAFIA CLIENT-SIDE AES-256-GCM)   -->
+  <!-- ===================================================================== -->
+  <div id="pin-modal" class="modal-overlay">
+    <div class="pin-card">
+      <div class="pin-header">
+        <div class="app-icon-wrap">
+          <img src="icon.svg" alt="Ícone Casa G&J" class="app-icon-img">
+        </div>
+        <h2>Casa G&amp;J</h2>
+        <p class="pin-subtitle">Cofre Criptografado Ponta a Ponta</p>
+      </div>
+
+      <div class="pin-security-badge">
+        <span class="badge-icon">🔐</span>
+        <span>AES-256-GCM + PBKDF2 (100k)</span>
+      </div>
+
+      <p class="pin-desc">Digite o PIN do casal para decifrar os dados no seu aparelho:</p>
+
+      <div class="pin-dots" id="pin-dots">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+
+      <div class="pin-error" id="pin-error">PIN incorreto. Tente novamente.</div>
+
+      <!-- Teclado Numérico Touch Screen -->
+      <div class="keypad">
+        <button class="key-btn" data-key="1">1</button>
+        <button class="key-btn" data-key="2">2</button>
+        <button class="key-btn" data-key="3">3</button>
+        <button class="key-btn" data-key="4">4</button>
+        <button class="key-btn" data-key="5">5</button>
+        <button class="key-btn" data-key="6">6</button>
+        <button class="key-btn" data-key="7">7</button>
+        <button class="key-btn" data-key="8">8</button>
+        <button class="key-btn" data-key="9">9</button>
+        <button class="key-btn key-action" id="key-clear">C</button>
+        <button class="key-btn" data-key="0">0</button>
+        <button class="key-btn key-action" id="key-back">⌫</button>
+      </div>
+
+      <div class="pin-footer-info">
+        Nenhum dado financeiro trafega descriptografado. Decodificação 100% em memória RAM via WebCrypto API.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- APLICAÇÃO PRINCIPAL                                                   -->
+  <!-- ===================================================================== -->
+  <div id="app-container" class="app-layout hidden">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-branding">
+        <img src="icon.svg" alt="Logo" class="header-logo">
+        <div>
+          <h1 class="header-title">Casa G&amp;J</h1>
+          <span class="header-sync-info" id="sync-info">Sincronizado</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-theme" class="icon-btn" title="Alternar tema">🌓</button>
+        <button id="btn-lock" class="icon-btn" title="Bloquear app">🔒</button>
+      </div>
+    </header>
+
+    <!-- Main Scrollable Content -->
+    <main class="app-content">
+
+      <!-- ================================================================= -->
+      <!-- TELA 1: AGORA (Semáforos, Metas da Semana e Calculadora Rápida)   -->
+      <!-- ================================================================= -->
+      <section id="tab-agora" class="tab-pane active">
+        
+        <!-- Cartão Termômetro: Fatura Cartões Banrisul & Nubank -->
+        <div class="card card-hero">
+          <div class="card-hero-head">
+            <span class="pill pill-primary">Termômetro do Mês</span>
+            <span class="text-muted" id="hero-month-label">Novembro / 2026</span>
+          </div>
+          <div class="card-hero-values">
+            <div class="hero-val-block">
+              <span class="val-label">Cartões Guto (Teto R$ 3.500)</span>
+              <span class="val-num" id="hero-guto-val">R$ 0,00</span>
+              <div class="progress-bar-wrap">
+                <div class="progress-bar" id="hero-guto-bar"></div>
+              </div>
+            </div>
+            <div class="hero-val-block mt-3">
+              <span class="val-label">Cartões Jéssica (Teto R$ 2.500)</span>
+              <span class="val-num" id="hero-je-val">R$ 0,00</span>
+              <div class="progress-bar-wrap">
+                <div class="progress-bar" id="hero-je-bar"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Semáforos Semanais -->
+        <h3 class="section-title">🚦 Semáforos de Controle Semanal</h3>
+        <p class="section-subtitle">Onde estamos gastando e quanto ainda podemos gastar:</p>
+
+        <div class="semaphore-grid">
+          <!-- VA Zaffari & Feira -->
+          <div class="sem-card" id="sem-va">
+            <div class="sem-top">
+              <div class="sem-icon">🛒</div>
+              <div class="sem-info">
+                <span class="sem-name">Vale-Alimentação (Semana)</span>
+                <span class="sem-meta">Meta: R$ 630,00 / semana</span>
+              </div>
+            </div>
+            <div class="sem-gauge">
+              <div class="gauge-bar-wrap">
+                <div class="gauge-bar" id="gauge-va-bar"></div>
+              </div>
+              <div class="sem-numbers">
+                <span id="sem-va-spent">R$ 0,00 gastos</span>
+                <span class="sem-avail" id="sem-va-avail">R$ 630,00 livres</span>
+              </div>
+            </div>
+            <span class="sem-hint">Exclusivo para Zaffari e Feira de Sábado</span>
+          </div>
+
+          <!-- Comer Fora & iFood -->
+          <div class="sem-card" id="sem-comer-fora">
+            <div class="sem-top">
+              <div class="sem-icon">🍕</div>
+              <div class="sem-info">
+                <span class="sem-name">Comer Fora &amp; Lazer</span>
+                <span class="sem-meta">Meta: R$ 250,00 / semana (R$ 1.000/mês)</span>
+              </div>
+            </div>
+            <div class="sem-gauge">
+              <div class="gauge-bar-wrap">
+                <div class="gauge-bar" id="gauge-cf-bar"></div>
+              </div>
+              <div class="sem-numbers">
+                <span id="sem-cf-spent">R$ 0,00 gastos</span>
+                <span class="sem-avail" id="sem-cf-avail">R$ 250,00 livres</span>
+              </div>
+            </div>
+            <span class="sem-hint">Restaurantes, Baru, Cafés, Sorvete e iFood</span>
+          </div>
+
+          <!-- Uber Guto -->
+          <div class="sem-card">
+            <div class="sem-top">
+              <div class="sem-icon">🚗</div>
+              <div class="sem-info">
+                <span class="sem-name">Uber / 99 Guto</span>
+                <span class="sem-meta">Meta: R$ 100,00 / semana</span>
+              </div>
+            </div>
+            <div class="sem-gauge">
+              <div class="gauge-bar-wrap">
+                <div class="gauge-bar" id="gauge-uber-guto-bar"></div>
+              </div>
+              <div class="sem-numbers">
+                <span id="sem-ug-spent">R$ 0,00</span>
+                <span class="sem-avail" id="sem-ug-avail">R$ 100,00 livres</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Uber Jé -->
+          <div class="sem-card">
+            <div class="sem-top">
+              <div class="sem-icon">🚗</div>
+              <div class="sem-info">
+                <span class="sem-name">Uber / 99 Jéssica</span>
+                <span class="sem-meta">Meta: R$ 100,00 / semana</span>
+              </div>
+            </div>
+            <div class="sem-gauge">
+              <div class="gauge-bar-wrap">
+                <div class="gauge-bar" id="gauge-uber-je-bar"></div>
+              </div>
+              <div class="sem-numbers">
+                <span id="sem-uj-spent">R$ 0,00</span>
+                <span class="sem-avail" id="sem-uj-avail">R$ 100,00 livres</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ferramenta Rápida: Calculadora Caixinha Jé (30%) & Anotação Rápida -->
+        <div class="card mt-4">
+          <div class="card-head-simple">
+            <span class="card-badge">👩‍⚕️ Caixinha Consultório Jé (30%)</span>
+          </div>
+          <p class="text-sm text-muted">
+            Recebeu Pix de paciente? Digite o valor para saber quanto separar para a Caixinha <strong>Casa &amp; Cartão</strong>:
+          </p>
+          <div class="calc-row">
+            <div class="input-currency-wrap">
+              <span class="curr-symbol">R$</span>
+              <input type="number" id="calc-je-input" placeholder="250,00" step="10" min="0">
+            </div>
+            <button class="btn btn-primary" id="btn-calc-je">Calcular</button>
+          </div>
+          <div class="calc-result" id="calc-je-result" style="display:none;">
+            <div class="calc-res-item save">
+              <span class="res-label">💰 Guardar na Caixinha (30%)</span>
+              <span class="res-num" id="calc-save-val">R$ 75,00</span>
+            </div>
+            <div class="calc-res-item free">
+              <span class="res-label">💳 Livre Consultório (70%)</span>
+              <span class="res-num" id="calc-free-val">R$ 175,00</span>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TELA 2: JÉ & CASA (Acerto Dia 10 e 20, 4 Potes de Reserva)        -->
+      <!-- ================================================================= -->
+      <section id="tab-je" class="tab-pane">
+        <h3 class="section-title">👩‍⚕️ Gestão Jéssica &amp; Acertos Mensais</h3>
+        <p class="section-subtitle">Ritmo financeiro bimestral e sincronia com a casa:</p>
+
+        <!-- Card Acertos Dia 10 e Dia 20 -->
+        <div class="card">
+          <div class="acerto-timeline">
+            <div class="acerto-step">
+              <div class="acerto-dot">10</div>
+              <div class="acerto-content">
+                <h4>Dia 10: Colégio da Clara</h4>
+                <p class="text-sm text-muted">Repasse para o boleto do Colégio Bom Conselho</p>
+                <div class="acerto-target">Meta: <strong>R$ 1.200,00 a R$ 1.500,00</strong></div>
+              </div>
+            </div>
+            <div class="acerto-step">
+              <div class="acerto-dot">20</div>
+              <div class="acerto-content">
+                <h4>Dia 20: Fatura Cartões Adicionais</h4>
+                <p class="text-sm text-muted">Acerto dos cartões 4219, 9994 e 1229 com a Caixinha</p>
+                <div class="acerto-target">Teto Máximo: <strong>R$ 2.500,00</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 Potes de Reserva -->
+        <h3 class="section-title mt-4">🛡️ Os 4 Potes de Reserva da Família</h3>
+        
+        <div class="potes-grid" id="potes-container">
+          <!-- Renderizado via app.js -->
+        </div>
+
+        <!-- Card Equalizador Sobreaviso 2x1 -->
+        <div class="card card-highlight mt-4">
+          <div class="card-hero-head">
+            <span class="pill pill-warning">Atenção Junho/2027</span>
+            <span class="text-bold">Regra do Sobreaviso 2x1</span>
+          </div>
+          <p class="text-sm mt-2">
+            Com a entrada da nova colega na escala do sobreaviso, a remuneração alternará: 
+            <strong>2 meses sim</strong> (~R$ 9.400 líq) e <strong>1 mês não</strong> (~R$ 6.250 líq).
+          </p>
+          <div class="formula-box">
+            <div class="formula-step">
+              <span class="badge-num">1</span>
+              <span>Nos 2 meses com sobreaviso: poupar <strong>R$ 1.050,00/mês</strong></span>
+            </div>
+            <div class="formula-step">
+              <span class="badge-num">2</span>
+              <span>No 3º mês sem sobreaviso: resgatar <strong>R$ 2.100,00</strong> da reserva</span>
+            </div>
+            <div class="formula-res">
+              🎯 Renda líquida do Guto estabilizada em <strong>R$ 8.350,00 todos os meses</strong>!
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TELA 3: PARCELAS & CORTES (Queda de R$ 1.740/mês até Junho/2027)  -->
+      <!-- ================================================================= -->
+      <section id="tab-parcelas" class="tab-pane">
+        <h3 class="section-title">📉 Cronograma de Queda das Parcelas</h3>
+        <p class="section-subtitle">O alívio de R$ 1.740/mês mês a mês até Junho de 2027:</p>
+
+        <!-- Gráfico / Barras de Parcelas Futuras -->
+        <div class="card">
+          <div class="parcelas-chart" id="parcelas-chart-container">
+            <!-- Renderizado via app.js -->
+          </div>
+          <div class="chart-summary">
+            <span>Dez/26: <strong>R$ 1.764,16</strong></span>
+            <span class="arrow-right">➔</span>
+            <span>Jul/27: <strong>R$ 24,24</strong></span>
+          </div>
+        </div>
+
+        <!-- Checklist Interativo de Cortes de Assinaturas -->
+        <h3 class="section-title mt-4">✂️ Checklist de Cortes Imediatos</h3>
+        <p class="section-subtitle">Marque os cortes já realizados no celular (salvo localmente):</p>
+
+        <div class="card checklist-card" id="checklist-container">
+          <label class="check-item">
+            <input type="checkbox" id="cut-ifood" class="chk-cut" data-save="14.95">
+            <div class="check-label">
+              <strong>Cancelar 2º iFood Club da Jé</strong>
+              <span>Economia de R$ 14,95/mês (manter apenas o do Guto)</span>
+            </div>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" id="cut-aquarius" class="chk-cut" data-save="39.90">
+            <div class="check-label">
+              <strong>Cancelar Streaming Aquarius</strong>
+              <span>Economia de R$ 39,90/mês (sem uso ativo)</span>
+            </div>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" id="cut-debito-nu" class="chk-cut" data-save="0.0">
+            <div class="check-label">
+              <strong>Desativar Débito Automático Nubank</strong>
+              <span>Evitar juros/multas surpresa pagando no vencimento real dia 27</span>
+            </div>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" id="cut-jet-card" class="chk-cut" data-save="0.0">
+            <div class="check-label">
+              <strong>Trocar cartão no App Jet Patinetes</strong>
+              <span>Mudar do Banrisul para débito ou Nubank</span>
+            </div>
+          </label>
+          <div class="savings-counter">
+            Economia mensal acumulada com os cortes: <strong id="total-savings">R$ 0,00/mês</strong>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TELA 4: RAIO-X 2026 (Visão Mensal dos Blocos Auditados)          -->
+      <!-- ================================================================= -->
+      <section id="tab-raiox" class="tab-pane">
+        <h3 class="section-title">📊 Raio-X Financeiro 2026</h3>
+        <p class="section-subtitle">Consolidação auditada mês a mês (Janeiro a Novembro):</p>
+
+        <div class="raiox-months-list" id="raiox-container">
+          <!-- Renderizado via app.js -->
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="app-nav">
+      <button class="nav-item active" data-tab="tab-agora">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Agora</span>
+      </button>
+      <button class="nav-item" data-tab="tab-je">
+        <span class="nav-icon">👩‍⚕️</span>
+        <span class="nav-label">Jé &amp; Casa</span>
+      </button>
+      <button class="nav-item" data-tab="tab-parcelas">
+        <span class="nav-icon">📉</span>
+        <span class="nav-label">Parcelas</span>
+      </button>
+      <button class="nav-item" data-tab="tab-raiox">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Raio-X</span>
+      </button>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
